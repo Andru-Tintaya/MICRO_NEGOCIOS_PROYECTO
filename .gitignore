@@ -1,0 +1,27 @@
+cat << 'EOF' > .gitignore
+# Entorno virtual de Python
+venv/
+.venv/
+env/
+
+# Archivos compilados de Python
+**/__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Configuración y credenciales (Seguridad)
+.env
+instance/
+
+# Archivos temporales o accidentales detectados en tu lista
+"#"
+archivo
+Crear
+el
+vacío
+test.py
+
+# Archivos del sistema operativo
+.DS_Store
+EOF

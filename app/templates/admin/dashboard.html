@@ -1,0 +1,525 @@
+{% extends "base.html" %}
+
+{% block title %}Panel de Administración - MiZona{% endblock %}
+
+{% block content %}
+<div class="admin-container">
+    <!-- Sidebar -->
+    <aside class="admin-sidebar">
+        <div class="sidebar-header">
+            <i class="fas fa-crown"></i>
+            <h2>Admin</h2>
+            <p>Panel de Control</p>
+        </div>
+        
+        <nav class="sidebar-nav">
+            <a href="{{ url_for('admin.dashboard') }}" class="nav-item active">
+                <i class="fas fa-chart-pie"></i> Dashboard
+            </a>
+            <a href="{{ url_for('admin.users') }}" class="nav-item">
+                <i class="fas fa-users"></i> Usuarios
+                <span class="badge">{{ total_users }}</span>
+            </a>
+            <a href="#" class="nav-item">
+                <i class="fas fa-store"></i> Tiendas
+                <span class="badge">{{ total_stores }}</span>
+            </a>
+            <a href="#" class="nav-item">
+                <i class="fas fa-box"></i> Productos
+                <span class="badge">{{ total_products }}</span>
+            </a>
+            <a href="#" class="nav-item">
+                <i class="fas fa-shopping-bag"></i> Pedidos
+                <span class="badge">{{ total_orders }}</span>
+            </a>
+            <a href="#" class="nav-item">
+                <i class="fas fa-star"></i> Reseñas
+                <span class="badge">{{ total_reviews }}</span>
+            </a>
+            <a href="{{ url_for('admin.reports') }}" class="nav-item">
+                <i class="fas fa-file-alt"></i> Reportes
+            </a>
+            <a href="{{ url_for('index') }}" class="nav-item">
+                <i class="fas fa-home"></i> Ver Sitio
+            </a>
+            <a href="{{ url_for('auth.logout') }}" class="nav-item logout">
+                <i class="fas fa-sign-out-alt"></i> Cerrar Sesión
+            </a>
+        </nav>
+    </aside>
+    
+    <!-- Main Content -->
+    <main class="admin-content">
+        <header class="admin-header">
+            <h1>Dashboard</h1>
+            <div class="admin-user">
+                <span>{{ current_user.full_name }}</span>
+                <span class="role-badge">Administrador</span>
+            </div>
+        </header>
+        
+        <!-- Stats -->
+        <div class="admin-stats">
+            <div class="stat-card" style="border-left: 4px solid #10B981;">
+                <div class="stat-icon"><i class="fas fa-users" style="color: #10B981;"></i></div>
+                <div class="stat-info">
+                    <h3>{{ total_users }}</h3>
+                    <p>Usuarios Totales</p>
+                    <small>+{{ new_users }} nuevos (7 días)</small>
+                </div>
+            </div>
+            
+            <div class="stat-card" style="border-left: 4px solid #3B82F6;">
+                <div class="stat-icon"><i class="fas fa-store" style="color: #3B82F6;"></i></div>
+                <div class="stat-info">
+                    <h3>{{ total_stores }}</h3>
+                    <p>Tiendas Registradas</p>
+                </div>
+            </div>
+            
+            <div class="stat-card" style="border-left: 4px solid #F59E0B;">
+                <div class="stat-icon"><i class="fas fa-box" style="color: #F59E0B;"></i></div>
+                <div class="stat-info">
+                    <h3>{{ total_products }}</h3>
+                    <p>Productos Publicados</p>
+                </div>
+            </div>
+            
+            <div class="stat-card" style="border-left: 4px solid #EF4444;">
+                <div class="stat-icon"><i class="fas fa-shopping-bag" style="color: #EF4444;"></i></div>
+                <div class="stat-info">
+                    <h3>{{ total_orders }}</h3>
+                    <p>Pedidos Totales</p>
+                </div>
+            </div>
+            
+            <div class="stat-card" style="border-left: 4px solid #8B5CF6;">
+                <div class="stat-icon"><i class="fas fa-star" style="color: #8B5CF6;"></i></div>
+                <div class="stat-info">
+                    <h3>{{ total_reviews }}</h3>
+                    <p>Reseñas</p>
+                </div>
+            </div>
+            
+            <div class="stat-card" style="border-left: 4px solid #EC4899;">
+                <div class="stat-icon"><i class="fas fa-money-bill-wave" style="color: #EC4899;"></i></div>
+                <div class="stat-info">
+                    <h3>Bs {{ "%.2f"|format(monthly_sales) }}</h3>
+                    <p>Ventas del Mes</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Charts -->
+        <div class="admin-charts">
+            <div class="chart-card">
+                <h3>Pedidos por Estado</h3>
+                <canvas id="ordersChart"></canvas>
+            </div>
+            
+            <div class="chart-card">
+                <h3>Productos Más Vendidos</h3>
+                <canvas id="topProductsChart"></canvas>
+            </div>
+        </div>
+        
+        <!-- Recent Activity -->
+        <div class="recent-activity">
+            <h3>Actividad Reciente</h3>
+            <div class="activity-list">
+                {% if recent_activities %}
+                    {% for activity in recent_activities %}
+                    <div class="activity-item">
+                        <div class="activity-icon">
+                            <i class="fas fa-{{ activity.icon }}"></i>
+                        </div>
+                        <div class="activity-content">
+                            <p>{{ activity.message }}</p>
+                            <span class="activity-time">{{ activity.time }}</span>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="activity-empty">
+                        <i class="fas fa-inbox"></i>
+                        <p>No hay actividad reciente</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </main>
+</div>
+
+<style>
+/* Admin Layout */
+.admin-container {
+    display: flex;
+    min-height: calc(100vh - 70px);
+    background: #F1F5F9;
+}
+
+.admin-sidebar {
+    width: 260px;
+    background: #0F172A;
+    color: #F8FAFC;
+    padding: 20px 0;
+    position: sticky;
+    top: 70px;
+    height: calc(100vh - 70px);
+    overflow-y: auto;
+}
+
+.sidebar-header {
+    padding: 0 20px 20px;
+    border-bottom: 1px solid #1E293B;
+}
+
+.sidebar-header i {
+    font-size: 2rem;
+    color: #10B981;
+}
+
+.sidebar-header h2 {
+    margin: 8px 0 4px;
+    font-size: 1.2rem;
+}
+
+.sidebar-header p {
+    color: #94A3B8;
+    font-size: 0.85rem;
+}
+
+.sidebar-nav {
+    padding: 16px 0;
+}
+
+.sidebar-nav .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 20px;
+    color: #94A3B8;
+    text-decoration: none;
+    transition: all 0.3s;
+    border-left: 3px solid transparent;
+}
+
+.sidebar-nav .nav-item:hover {
+    background: #1E293B;
+    color: #F8FAFC;
+}
+
+.sidebar-nav .nav-item.active {
+    background: #1E293B;
+    color: #10B981;
+    border-left-color: #10B981;
+}
+
+.sidebar-nav .nav-item i {
+    width: 20px;
+    text-align: center;
+}
+
+.sidebar-nav .nav-item .badge {
+    margin-left: auto;
+    background: #10B981;
+    color: white;
+    padding: 2px 10px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+}
+
+.sidebar-nav .nav-item.logout {
+    margin-top: 20px;
+    border-top: 1px solid #1E293B;
+    padding-top: 16px;
+    color: #EF4444;
+}
+
+.sidebar-nav .nav-item.logout:hover {
+    background: rgba(239, 68, 68, 0.1);
+}
+
+/* Admin Content */
+.admin-content {
+    flex: 1;
+    padding: 24px 32px;
+}
+
+.admin-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+}
+
+.admin-header h1 {
+    font-size: 1.8rem;
+    font-weight: 800;
+}
+
+.admin-user {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.role-badge {
+    background: #10B981;
+    color: white;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+/* Stats */
+.admin-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+    margin-bottom: 30px;
+}
+
+.stat-card {
+    background: white;
+    padding: 20px;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    transition: transform 0.3s;
+}
+
+.stat-card:hover {
+    transform: translateY(-4px);
+}
+
+.stat-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    background: #F8FAFC;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+}
+
+.stat-info h3 {
+    font-size: 1.5rem;
+    font-weight: 800;
+    margin: 0;
+}
+
+.stat-info p {
+    color: #64748B;
+    font-size: 0.85rem;
+    margin: 0;
+}
+
+.stat-info small {
+    color: #10B981;
+    font-size: 0.75rem;
+}
+
+/* Charts */
+.admin-charts {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    margin-bottom: 30px;
+}
+
+.chart-card {
+    background: white;
+    padding: 20px;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.chart-card h3 {
+    font-size: 1rem;
+    margin-bottom: 16px;
+}
+
+.chart-card canvas {
+    max-height: 250px;
+}
+
+/* Recent Activity */
+.recent-activity {
+    background: white;
+    padding: 20px;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.recent-activity h3 {
+    font-size: 1rem;
+    margin-bottom: 16px;
+}
+
+.activity-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.activity-item {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 12px;
+    border-radius: 8px;
+    background: #F8FAFC;
+}
+
+.activity-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: #E2E8F0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #64748B;
+}
+
+.activity-content {
+    flex: 1;
+}
+
+.activity-content p {
+    margin: 0;
+    font-size: 0.95rem;
+}
+
+.activity-time {
+    font-size: 0.8rem;
+    color: #94A3B8;
+}
+
+.activity-empty {
+    text-align: center;
+    padding: 30px;
+    color: #94A3B8;
+}
+
+.activity-empty i {
+    font-size: 2rem;
+    margin-bottom: 8px;
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+    .admin-stats {
+        grid-template-columns: repeat(3, 1fr);
+    }
+    
+    .admin-charts {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 768px) {
+    .admin-sidebar {
+        display: none;
+    }
+    
+    .admin-content {
+        padding: 16px;
+    }
+    
+    .admin-stats {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+
+@media (max-width: 480px) {
+    .admin-stats {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Gráfica de pedidos por estado
+    var ctx1 = document.getElementById('ordersChart');
+    if (ctx1) {
+        var statusLabels = ['Pendiente', 'Confirmado', 'Enviado', 'Entregado', 'Cancelado'];
+        var statusData = [
+            {{ orders_by_status.get('pendiente', 0) }},
+            {{ orders_by_status.get('confirmado', 0) }},
+            {{ orders_by_status.get('enviado', 0) }},
+            {{ orders_by_status.get('entregado', 0) }},
+            {{ orders_by_status.get('cancelado', 0) }}
+        ];
+        
+        new Chart(ctx1, {
+            type: 'doughnut',
+            data: {
+                labels: statusLabels,
+                datasets: [{
+                    data: statusData,
+                    backgroundColor: ['#F59E0B', '#3B82F6', '#8B5CF6', '#10B981', '#EF4444'],
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        position: 'bottom'
+                    }
+                }
+            }
+        });
+    }
+    
+    // Gráfica de productos más vendidos
+    var ctx2 = document.getElementById('topProductsChart');
+    if (ctx2) {
+        var productLabels = [];
+        var productData = [];
+        {% for p in top_products %}
+        productLabels.push('{{ p.name }}');
+        productData.push({{ p.sold_count }});
+        {% endfor %}
+        
+        new Chart(ctx2, {
+            type: 'bar',
+            data: {
+                labels: productLabels,
+                datasets: [{
+                    label: 'Unidades Vendidas',
+                    data: productData,
+                    backgroundColor: '#10B981',
+                    borderColor: '#059669',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

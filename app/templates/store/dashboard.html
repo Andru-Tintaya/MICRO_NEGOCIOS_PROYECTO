@@ -1,0 +1,434 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - {{ store.name }}{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+    <!-- Sidebar -->
+    <aside class="dashboard-sidebar">
+        <div class="sidebar-header">
+            {% if store.logo_url %}
+            <img src="{{ store.logo_url }}" alt="{{ store.name }}" class="store-logo">
+            {% else %}
+            <div class="store-icon"><i class="fas fa-store"></i></div>
+            {% endif %}
+            <h3>{{ store.name }}</h3>
+            <p><i class="fas fa-map-marker-alt"></i> {{ store.city }}</p>
+            <span class="store-status {% if store.is_active %}active{% else %}inactive{% endif %}">
+                {{ 'Activo' if store.is_active else 'Inactivo' }}
+            </span>
+        </div>
+        
+        <nav class="sidebar-nav">
+            <a href="#" class="nav-item active" data-section="products">
+                <i class="fas fa-box"></i> Productos
+                <span class="badge">{{ products|length }}</span>
+            </a>
+            <a href="#" class="nav-item" data-section="orders">
+                <i class="fas fa-shopping-bag"></i> Pedidos
+                <span class="badge">0</span>
+            </a>
+            <a href="#" class="nav-item" data-section="reviews">
+                <i class="fas fa-star"></i> Reseñas
+                <span class="badge">0</span>
+            </a>
+            <a href="#" class="nav-item" data-section="stats">
+                <i class="fas fa-chart-line"></i> Estadísticas
+            </a>
+            <a href="{{ url_for('store.edit_store') }}" class="nav-item">
+                <i class="fas fa-cog"></i> Configuración
+            </a>
+            <a href="{{ url_for('store.view_store', slug=store.slug) }}" class="nav-item" target="_blank">
+                <i class="fas fa-eye"></i> Ver Tienda
+            </a>
+            <a href="{{ url_for('auth.logout') }}" class="nav-item logout">
+                <i class="fas fa-sign-out-alt"></i> Cerrar Sesión
+            </a>
+        </nav>
+    </aside>
+    
+    <!-- Main Content -->
+    <main class="dashboard-content">
+        <!-- Header -->
+        <header class="dash-header">
+            <h1>Panel de Control</h1>
+            <div class="dash-user">
+                <span>Bienvenido, <strong>{{ session.full_name }}</strong></span>
+            </div>
+        </header>
+        
+        <!-- Stats Cards -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-icon" style="background: #ECFDF5;">
+                    <i class="fas fa-box" style="color: #10B981;"></i>
+                </div>
+                <div class="stat-info">
+                    <h3>{{ products|length }}</h3>
+                    <p>Total Productos</p>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon" style="background: #EFF6FF;">
+                    <i class="fas fa-shopping-bag" style="color: #3B82F6;"></i>
+                </div>
+                <div class="stat-info">
+                    <h3>0</h3>
+                    <p>Pedidos Totales</p>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon" style="background: #FEF3C7;">
+                    <i class="fas fa-star" style="color: #F59E0B;"></i>
+                </div>
+                <div class="stat-info">
+                    <h3>{{ "%.1f"|format(store.rating_avg) if store.rating_avg else 0 }}</h3>
+                    <p>Calificación Promedio</p>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon" style="background: #FEE2E2;">
+                    <i class="fas fa-users" style="color: #EF4444;"></i>
+                </div>
+                <div class="stat-info">
+                    <h3>{{ store.followers_count }}</h3>
+                    <p>Seguidores</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Products Section -->
+        <section id="products" class="content-section active">
+            <div class="section-header">
+                <h2>Mis Productos</h2>
+                <button class="btn-primary" onclick="showAddProductModal()">
+                    <i class="fas fa-plus"></i> Nuevo Producto
+                </button>
+            </div>
+            
+            <!-- Productos con stock bajo -->
+            {% if low_stock_products %}
+            <div class="alert-warning">
+                <i class="fas fa-exclamation-triangle"></i>
+                <strong>Alerta de Stock:</strong> Los siguientes productos tienen stock bajo:
+                <ul>
+                    {% for product in low_stock_products %}
+                    <li>{{ product.name }} - <strong>{{ product.stock }}</strong> unidades</li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+            
+            <div class="products-grid">
+                {% for product in products %}
+                <div class="product-card">
+                    <div class="product-image">
+                        <img src="{{ product.image_url or 'https://via.placeholder.com/300x300?text=Sin+Imagen' }}" 
+                             alt="{{ product.name }}" loading="lazy">
+                        {% if not product.is_active %}
+                        <span class="inactive-badge">Inactivo</span>
+                        {% endif %}
+                        {% if product.discount_price %}
+                        <span class="discount-badge">-{{ product.get_discount_percentage() }}%</span>
+                        {% endif %}
+                    </div>
+                    <div class="product-info">
+                        <h3>{{ product.name }}</h3>
+                        <div class="product-meta">
+                            <span class="product-stock {% if product.stock > 10 %}stock-ok{% elif product.stock > 0 %}stock-low{% else %}stock-out{% endif %}">
+                                {{ product.stock }} disponibles
+                            </span>
+                            <span class="product-sold"><i class="fas fa-shopping-cart"></i> {{ product.sold_count }} vendidos</span>
+                        </div>
+                        <div class="product-pricing">
+                            {% if product.discount_price %}
+                            <span class="price original">Bs {{ "%.2f"|format(product.price) }}</span>
+                            <span class="price discounted">Bs {{ "%.2f"|format(product.discount_price) }}</span>
+                            {% else %}
+                            <span class="price">Bs {{ "%.2f"|format(product.price) }}</span>
+                            {% endif %}
+                        </div>
+                        <div class="product-actions">
+                            <button class="btn-edit" onclick="showEditProductModal('{{ product.id }}')">
+                                <i class="fas fa-edit"></i> Editar
+                            </button>
+                            <button class="btn-delete" onclick="deleteProduct('{{ product.id }}')">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                            <a href="{{ url_for('product.detail', slug=product.slug) }}" class="btn-view" target="_blank">
+                                <i class="fas fa-eye"></i>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                {% else %}
+                <div class="empty-state">
+                    <i class="fas fa-box-open"></i>
+                    <h3>No tienes productos</h3>
+                    <p>Comienza agregando tu primer producto</p>
+                    <button class="btn-primary" onclick="showAddProductModal()">
+                        <i class="fas fa-plus"></i> Agregar Producto
+                    </button>
+                </div>
+                {% endfor %}
+            </div>
+        </section>
+        
+        <!-- Orders Section -->
+        <section id="orders" class="content-section">
+            <h2>Pedidos Recibidos</h2>
+            <div class="empty-state">
+                <i class="fas fa-shopping-bag"></i>
+                <h3>No hay pedidos aún</h3>
+                <p>Los pedidos aparecerán aquí cuando los clientes compren tus productos</p>
+            </div>
+        </section>
+        
+        <!-- Reviews Section -->
+        <section id="reviews" class="content-section">
+            <h2>Reseñas de Clientes</h2>
+            <div class="empty-state">
+                <i class="fas fa-star"></i>
+                <h3>Sin reseñas aún</h3>
+                <p>Los clientes calificarán tus productos aquí</p>
+            </div>
+        </section>
+        
+        <!-- Stats Section -->
+        <section id="stats" class="content-section">
+            <h2>Estadísticas</h2>
+            <div class="stats-charts">
+                <div class="chart-container">
+                    <h3>Ventas por Mes</h3>
+                    <canvas id="salesChart"></canvas>
+                </div>
+                <div class="chart-container">
+                    <h3>Productos Más Vendidos</h3>
+                    <canvas id="topProductsChart"></canvas>
+                </div>
+            </div>
+        </section>
+    </main>
+</div>
+
+<!-- Modal para productos -->
+<div id="productModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 id="modalTitle">Nuevo Producto</h2>
+            <span class="close" onclick="closeProductModal()">&times;</span>
+        </div>
+        <form id="productForm" enctype="multipart/form-data">
+            <input type="hidden" id="productId">
+            
+            <div class="form-group">
+                <label>Nombre del Producto *</label>
+                <input type="text" id="productName" required>
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Precio (Bs) *</label>
+                    <input type="number" id="productPrice" step="0.01" required>
+                </div>
+                <div class="form-group">
+                    <label>Precio con Descuento</label>
+                    <input type="number" id="productDiscount" step="0.01">
+                </div>
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Stock *</label>
+                    <input type="number" id="productStock" required>
+                </div>
+                <div class="form-group">
+                    <label>Stock Mínimo</label>
+                    <input type="number" id="productMinStock">
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label>Categoría</label>
+                <select id="productCategory">
+                    <option value="">Sin categoría</option>
+                    {% for category in categories %}
+                    <option value="{{ category.id }}">{{ category.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label>Descripción</label>
+                <textarea id="productDesc" rows="3"></textarea>
+            </div>
+            
+            <div class="form-group">
+                <label>Imagen Principal</label>
+                <div class="image-upload" id="imageUpload">
+                    <i class="fas fa-cloud-upload-alt"></i>
+                    <p>Haz clic o arrastra una imagen aquí</p>
+                    <input type="file" id="productImage" accept="image/*">
+                    <img id="imagePreview" style="display: none;">
+                </div>
+            </div>
+            
+            <div class="form-group checkbox">
+                <label>
+                    <input type="checkbox" id="productFeatured"> Producto Destacado
+                </label>
+            </div>
+            
+            <button type="submit" class="btn-primary btn-block">
+                <i class="fas fa-save"></i> Guardar Producto
+            </button>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Variables globales
+let editProductId = null;
+
+// Mostrar modal para nuevo producto
+function showAddProductModal() {
+    editProductId = null;
+    document.getElementById('modalTitle').textContent = 'Nuevo Producto';
+    document.getElementById('productForm').reset();
+    document.getElementById('imagePreview').style.display = 'none';
+    document.getElementById('productModal').style.display = 'block';
+}
+
+// Mostrar modal para editar producto
+function showEditProductModal(productId) {
+    editProductId = productId;
+    document.getElementById('modalTitle').textContent = 'Editar Producto';
+    document.getElementById('productModal').style.display = 'block';
+    
+    // Cargar datos del producto
+    fetch(`/api/products/${productId}`)
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                const p = data.data;
+                document.getElementById('productName').value = p.name;
+                document.getElementById('productPrice').value = p.price;
+                document.getElementById('productDiscount').value = p.discount_price || '';
+                document.getElementById('productStock').value = p.stock;
+                document.getElementById('productMinStock').value = p.min_stock || 0;
+                document.getElementById('productCategory').value = p.category_id || '';
+                document.getElementById('productDesc').value = p.description || '';
+                document.getElementById('productFeatured').checked = p.is_featured || false;
+                
+                if (p.image_url) {
+                    const preview = document.getElementById('imagePreview');
+                    preview.src = p.image_url;
+                    preview.style.display = 'block';
+                }
+            }
+        });
+}
+
+// Cerrar modal
+function closeProductModal() {
+    document.getElementById('productModal').style.display = 'none';
+}
+
+// Eliminar producto
+function deleteProduct(productId) {
+    if (confirm('¿Estás seguro de eliminar este producto?')) {
+        fetch(`/api/products/${productId}`, { method: 'DELETE' })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    location.reload();
+                } else {
+                    alert('Error: ' + data.error);
+                }
+            })
+            .catch(error => {
+                alert('Error al eliminar el producto');
+            });
+    }
+}
+
+// Manejar el formulario
+document.getElementById('productForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData();
+    formData.append('name', document.getElementById('productName').value);
+    formData.append('price', document.getElementById('productPrice').value);
+    formData.append('discount_price', document.getElementById('productDiscount').value || '');
+    formData.append('stock', document.getElementById('productStock').value);
+    formData.append('min_stock', document.getElementById('productMinStock').value || 0);
+    formData.append('category_id', document.getElementById('productCategory').value || '');
+    formData.append('description', document.getElementById('productDesc').value);
+    formData.append('is_featured', document.getElementById('productFeatured').checked ? 'on' : 'off');
+    
+    const fileInput = document.getElementById('productImage');
+    if (fileInput.files[0]) {
+        formData.append('image', fileInput.files[0]);
+    }
+    
+    const url = editProductId ? `/api/products/${editProductId}` : '/api/products';
+    const method = editProductId ? 'PUT' : 'POST';
+    
+    try {
+        const response = await fetch(url, {
+            method: method,
+            body: formData
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            alert('✅ Producto guardado con éxito');
+            location.reload();
+        } else {
+            alert('❌ Error: ' + result.error);
+        }
+    } catch (error) {
+        alert('❌ Error de conexión');
+    }
+});
+
+// Subir imagen con preview
+document.getElementById('productImage').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = function(ev) {
+            const preview = document.getElementById('imagePreview');
+            preview.src = ev.target.result;
+            preview.style.display = 'block';
+        };
+        reader.readAsDataURL(file);
+    }
+});
+
+// Navegación del sidebar
+document.querySelectorAll('.nav-item[data-section]').forEach(item => {
+    item.addEventListener('click', function(e) {
+        e.preventDefault();
+        // Remover active de todos
+        document.querySelectorAll('.nav-item[data-section]').forEach(n => n.classList.remove('active'));
+        document.querySelectorAll('.content-section').forEach(s => s.classList.remove('active'));
+        
+        this.classList.add('active');
+        const sectionId = this.dataset.section;
+        document.getElementById(sectionId).classList.add('active');
+    });
+});
+
+// Cerrar modal al hacer clic fuera
+window.onclick = function(event) {
+    const modal = document.getElementById('productModal');
+    if (event.target === modal) {
+        closeProductModal();
+    }
+};
+</script>
+{% endblock %}

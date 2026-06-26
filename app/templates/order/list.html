@@ -1,0 +1,255 @@
+{% extends "base.html" %}
+
+{% block title %}Mis Pedidos - MiZona{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1 class="page-title">📦 Mis Pedidos</h1>
+    
+    {% if orders %}
+    <div class="orders-list">
+        {% for order in orders %}
+        <div class="order-card" data-aos="fade-up">
+            <div class="order-header">
+                <div>
+                    <span class="order-number">#{{ order.order_number }}</span>
+                    <span class="order-date">{{ order.created_at.strftime('%d/%m/%Y %H:%M') }}</span>
+                </div>
+                <span class="order-status status-{{ order.status }}">
+                    {{ order.get_status_label() }}
+                </span>
+            </div>
+            
+            <div class="order-body">
+                <div class="order-items">
+                    {% for item in order.items %}
+                    <div class="order-item">
+                        <span>{{ item.product.name }} x{{ item.quantity }}</span>
+                        <span>Bs {{ "%.2f"|format(item.subtotal) }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+                
+                <div class="order-total">
+                    <span>Total: <strong>Bs {{ "%.2f"|format(order.total) }}</strong></span>
+                    {% if order.shipping_address %}
+                    <span class="order-address">
+                        <i class="fas fa-map-pin"></i> {{ order.shipping_address }}
+                    </span>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="order-actions">
+                <a href="{{ url_for('order.detail', order_id=order.id) }}" class="btn-view-order">
+                    Ver Detalles
+                </a>
+                {% if order.status == 'pendiente' %}
+                <button onclick="cancelOrder('{{ order.id }}')" class="btn-cancel-order">
+                    Cancelar
+                </button>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <i class="fas fa-shopping-bag"></i>
+        <h3>No tienes pedidos</h3>
+        <p>Explora los productos y realiza tu primer pedido</p>
+        <a href="{{ url_for('index') }}" class="btn-primary">Ver Productos</a>
+    </div>
+    {% endif %}
+</div>
+
+<style>
+.page-title {
+    font-size: 2rem;
+    font-weight: 800;
+    margin: 30px 0;
+}
+
+.orders-list {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.order-card {
+    background: white;
+    border: 1px solid #E2E8F0;
+    border-radius: 12px;
+    overflow: hidden;
+    transition: all 0.3s;
+}
+
+.order-card:hover {
+    box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+}
+
+.order-header {
+    padding: 16px 20px;
+    background: #F8FAFC;
+    border-bottom: 1px solid #E2E8F0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.order-number {
+    font-weight: 700;
+    font-size: 1.1rem;
+}
+
+.order-date {
+    color: #64748B;
+    font-size: 0.9rem;
+    margin-left: 12px;
+}
+
+.order-status {
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+.status-pendiente {
+    background: #FEF3C7;
+    color: #92400E;
+}
+
+.status-confirmado {
+    background: #DBEAFE;
+    color: #1E40AF;
+}
+
+.status-enviado {
+    background: #E0E7FF;
+    color: #3730A3;
+}
+
+.status-entregado {
+    background: #D1FAE5;
+    color: #065F46;
+}
+
+.status-cancelado {
+    background: #FEE2E2;
+    color: #991B1B;
+}
+
+.order-body {
+    padding: 16px 20px;
+}
+
+.order-items {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.order-item {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.95rem;
+}
+
+.order-total {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: 12px;
+    border-top: 1px solid #E2E8F0;
+}
+
+.order-total strong {
+    font-size: 1.1rem;
+    color: #10B981;
+}
+
+.order-address {
+    color: #64748B;
+    font-size: 0.9rem;
+}
+
+.order-actions {
+    padding: 12px 20px;
+    background: #F8FAFC;
+    border-top: 1px solid #E2E8F0;
+    display: flex;
+    gap: 12px;
+}
+
+.btn-view-order {
+    padding: 8px 20px;
+    background: #10B981;
+    color: white;
+    border-radius: 8px;
+    text-decoration: none;
+    font-weight: 600;
+    transition: background 0.3s;
+}
+
+.btn-view-order:hover {
+    background: #059669;
+    color: white;
+}
+
+.btn-cancel-order {
+    padding: 8px 20px;
+    background: #EF4444;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.3s;
+}
+
+.btn-cancel-order:hover {
+    background: #DC2626;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 60px 20px;
+}
+
+.empty-state i {
+    font-size: 3rem;
+    color: #94A3B8;
+    margin-bottom: 16px;
+}
+
+.empty-state h3 {
+    font-size: 1.5rem;
+    margin-bottom: 8px;
+}
+
+.empty-state p {
+    color: #64748B;
+    margin-bottom: 20px;
+}
+</style>
+
+<script>
+function cancelOrder(orderId) {
+    if (confirm('¿Estás seguro de cancelar este pedido?')) {
+        fetch(`/api/orders/${orderId}/cancel`, { method: 'POST' })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    location.reload();
+                } else {
+                    alert('Error: ' + data.error);
+                }
+            });
+    }
+}
+</script>
+{% endblock %}

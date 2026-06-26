@@ -1,0 +1,292 @@
+{% extends "base.html" %}
+
+{% block title %}Pedido #{{ order.order_number }} - MiZona{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="order-detail">
+        <div class="order-detail-header">
+            <h1>Pedido #{{ order.order_number }}</h1>
+            <span class="order-status status-{{ order.status }}">
+                {{ order.get_status_label() }}
+            </span>
+        </div>
+        
+        <div class="order-detail-grid">
+            <div class="order-info">
+                <h3>Información del Pedido</h3>
+                <div class="info-row">
+                    <span>Fecha:</span>
+                    <span>{{ order.created_at.strftime('%d/%m/%Y %H:%M') }}</span>
+                </div>
+                <div class="info-row">
+                    <span>Estado:</span>
+                    <span>{{ order.get_status_label() }}</span>
+                </div>
+                <div class="info-row">
+                    <span>Tienda:</span>
+                    <span>{{ order.store.name }}</span>
+                </div>
+                <div class="info-row">
+                    <span>Total:</span>
+                    <span class="total-amount">Bs {{ "%.2f"|format(order.total) }}</span>
+                </div>
+            </div>
+            
+            <div class="order-items">
+                <h3>Productos</h3>
+                <table class="items-table">
+                    <thead>
+                        <tr>
+                            <th>Producto</th>
+                            <th>Cantidad</th>
+                            <th>Precio</th>
+                            <th>Subtotal</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in order.items %}
+                        <tr>
+                            <td>{{ item.product.name }}</td>
+                            <td>{{ item.quantity }}</td>
+                            <td>Bs {{ "%.2f"|format(item.price) }}</td>
+                            <td>Bs {{ "%.2f"|format(item.subtotal) }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            <td colspan="3"><strong>Subtotal</strong></td>
+                            <td>Bs {{ "%.2f"|format(order.subtotal) }}</td>
+                        </tr>
+                        {% if order.shipping_cost > 0 %}
+                        <tr>
+                            <td colspan="3">Envío</td>
+                            <td>Bs {{ "%.2f"|format(order.shipping_cost) }}</td>
+                        </tr>
+                        {% endif %}
+                        {% if order.discount > 0 %}
+                        <tr>
+                            <td colspan="3">Descuento</td>
+                            <td>-Bs {{ "%.2f"|format(order.discount) }}</td>
+                        </tr>
+                        {% endif %}
+                        <tr class="total-row">
+                            <td colspan="3"><strong>Total</strong></td>
+                            <td><strong>Bs {{ "%.2f"|format(order.total) }}</strong></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+            
+            {% if order.shipping_address %}
+            <div class="order-shipping">
+                <h3>Dirección de Envío</h3>
+                <p>{{ order.shipping_address }}</p>
+                <p>{{ order.shipping_city }}</p>
+                {% if order.notes %}
+                <div class="order-notes">
+                    <h4>Notas</h4>
+                    <p>{{ order.notes }}</p>
+                </div>
+                {% endif %}
+            </div>
+            {% endif %}
+        </div>
+        
+        <div class="order-actions-bottom">
+            <a href="{{ url_for('order.list') }}" class="btn-back">
+                <i class="fas fa-arrow-left"></i> Volver a Mis Pedidos
+            </a>
+            
+            {% if current_user.is_vendor() and order.store.user_id == current_user.id %}
+            <div class="status-update">
+                <form method="POST" action="{{ url_for('order.update_status', order_id=order.id) }}">
+                    <select name="status">
+                        <option value="pendiente" {% if order.status == 'pendiente' %}selected{% endif %}>Pendiente</option>
+                        <option value="confirmado" {% if order.status == 'confirmado' %}selected{% endif %}>Confirmado</option>
+                        <option value="enviado" {% if order.status == 'enviado' %}selected{% endif %}>Enviado</option>
+                        <option value="entregado" {% if order.status == 'entregado' %}selected{% endif %}>Entregado</option>
+                        <option value="cancelado" {% if order.status == 'cancelado' %}selected{% endif %}>Cancelado</option>
+                    </select>
+                    <button type="submit" class="btn-primary">Actualizar Estado</button>
+                </form>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<style>
+.order-detail {
+    padding: 30px 0;
+}
+
+.order-detail-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.order-detail-header h1 {
+    font-size: 1.8rem;
+    font-weight: 800;
+    margin: 0;
+}
+
+.order-detail-grid {
+    display: grid;
+    grid-template-columns: 1fr 2fr;
+    gap: 30px;
+}
+
+.order-info {
+    background: #F8FAFC;
+    padding: 20px;
+    border-radius: 12px;
+    border: 1px solid #E2E8F0;
+}
+
+.order-info h3 {
+    margin-bottom: 16px;
+    font-size: 1.1rem;
+}
+
+.info-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 0;
+    border-bottom: 1px solid #E2E8F0;
+}
+
+.info-row:last-child {
+    border-bottom: none;
+}
+
+.total-amount {
+    font-weight: 700;
+    color: #10B981;
+    font-size: 1.1rem;
+}
+
+.order-items {
+    background: white;
+    padding: 20px;
+    border-radius: 12px;
+    border: 1px solid #E2E8F0;
+}
+
+.order-items h3 {
+    margin-bottom: 16px;
+    font-size: 1.1rem;
+}
+
+.items-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.items-table th {
+    text-align: left;
+    padding: 10px 8px;
+    border-bottom: 2px solid #E2E8F0;
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+.items-table td {
+    padding: 10px 8px;
+    border-bottom: 1px solid #F1F5F9;
+}
+
+.items-table tfoot td {
+    border-bottom: none;
+    padding-top: 12px;
+}
+
+.total-row td {
+    font-size: 1.1rem;
+    padding-top: 16px;
+    border-top: 2px solid #10B981;
+}
+
+.order-shipping {
+    grid-column: 1 / -1;
+    background: #F8FAFC;
+    padding: 20px;
+    border-radius: 12px;
+    border: 1px solid #E2E8F0;
+}
+
+.order-shipping h3 {
+    margin-bottom: 12px;
+    font-size: 1.1rem;
+}
+
+.order-notes {
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid #E2E8F0;
+}
+
+.order-notes h4 {
+    font-size: 0.9rem;
+    color: #64748B;
+    margin-bottom: 4px;
+}
+
+.order-actions-bottom {
+    margin-top: 30px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 16px;
+}
+
+.btn-back {
+    padding: 10px 20px;
+    background: #E2E8F0;
+    color: #1E293B;
+    border-radius: 8px;
+    text-decoration: none;
+    font-weight: 600;
+    transition: background 0.3s;
+}
+
+.btn-back:hover {
+    background: #CBD5E1;
+}
+
+.status-update {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+
+.status-update select {
+    padding: 10px 16px;
+    border: 1px solid #E2E8F0;
+    border-radius: 8px;
+    background: white;
+}
+
+@media (max-width: 768px) {
+    .order-detail-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .order-actions-bottom {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .status-update {
+        flex-direction: column;
+    }
+}
+</style>
+{% endblock %}

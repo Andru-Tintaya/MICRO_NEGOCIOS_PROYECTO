@@ -1,0 +1,182 @@
+{% extends "base.html" %}
+
+{% block title %}Crear Producto - MiZona{% endblock %}
+
+{% block content %}
+<div class="auth-container">
+    <div class="auth-card" data-aos="fade-up">
+        <div class="auth-header">
+            <i class="fas fa-box"></i>
+            <h2>Nuevo Producto</h2>
+            <p>Agrega un producto a tu tienda</p>
+        </div>
+        
+        <form method="POST" enctype="multipart/form-data" action="{{ url_for('product.create') }}">
+            <div class="form-group">
+                <label><i class="fas fa-tag"></i> Nombre del Producto *</label>
+                <input type="text" name="name" placeholder="Ej: Pan Integral" required>
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label><i class="fas fa-dollar-sign"></i> Precio (Bs) *</label>
+                    <input type="number" name="price" step="0.01" placeholder="0.00" required>
+                </div>
+                <div class="form-group">
+                    <label><i class="fas fa-tags"></i> Precio con Descuento</label>
+                    <input type="number" name="discount_price" step="0.01" placeholder="0.00">
+                </div>
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label><i class="fas fa-boxes"></i> Stock *</label>
+                    <input type="number" name="stock" placeholder="0" required>
+                </div>
+                <div class="form-group">
+                    <label><i class="fas fa-exclamation-triangle"></i> Stock Mínimo</label>
+                    <input type="number" name="min_stock" placeholder="0">
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label><i class="fas fa-list"></i> Categoría</label>
+                <select name="category_id">
+                    <option value="">Sin categoría</option>
+                    {% for category in categories %}
+                    <option value="{{ category.id }}">{{ category.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label><i class="fas fa-align-left"></i> Descripción</label>
+                <textarea name="description" rows="4" placeholder="Describe tu producto..."></textarea>
+            </div>
+            
+            <div class="form-group">
+                <label><i class="fas fa-image"></i> Imagen Principal</label>
+                <div class="image-upload" id="imageUpload">
+                    <i class="fas fa-cloud-upload-alt"></i>
+                    <p>Haz clic o arrastra una imagen aquí</p>
+                    <input type="file" name="image" accept="image/*" id="productImage">
+                    <img id="imagePreview" style="display: none; max-width: 200px; margin-top: 10px; border-radius: 8px;">
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label><i class="fas fa-images"></i> Imágenes Adicionales</label>
+                <div class="image-upload" id="galleryUpload">
+                    <i class="fas fa-images"></i>
+                    <p>Haz clic para seleccionar múltiples imágenes</p>
+                    <input type="file" name="images" accept="image/*" multiple id="galleryImages">
+                </div>
+                <div id="galleryPreview" style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px;"></div>
+            </div>
+            
+            <div class="form-group checkbox">
+                <label>
+                    <input type="checkbox" name="is_featured"> Producto Destacado
+                </label>
+            </div>
+            
+            <button type="submit" class="btn-primary btn-block">
+                <i class="fas fa-plus"></i> Crear Producto
+            </button>
+        </form>
+    </div>
+</div>
+
+<style>
+.form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+}
+
+.image-upload {
+    border: 2px dashed #E2E8F0;
+    padding: 30px;
+    text-align: center;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.3s;
+    background: #F8FAFC;
+}
+
+.image-upload:hover {
+    border-color: #10B981;
+    background: #ECFDF5;
+}
+
+.image-upload i {
+    font-size: 2rem;
+    color: #10B981;
+    margin-bottom: 8px;
+}
+
+.image-upload p {
+    color: #64748B;
+    margin: 0;
+}
+
+.image-upload input {
+    display: none;
+}
+
+#galleryPreview img {
+    width: 80px;
+    height: 80px;
+    object-fit: cover;
+    border-radius: 8px;
+    border: 2px solid #E2E8F0;
+}
+
+@media (max-width: 768px) {
+    .form-row {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
+
+<script>
+// Preview de imagen principal
+document.getElementById('productImage').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = function(ev) {
+            const preview = document.getElementById('imagePreview');
+            preview.src = ev.target.result;
+            preview.style.display = 'block';
+        };
+        reader.readAsDataURL(file);
+    }
+});
+
+// Preview de galería
+document.getElementById('galleryImages').addEventListener('change', function(e) {
+    const container = document.getElementById('galleryPreview');
+    container.innerHTML = '';
+    
+    Array.from(e.target.files).forEach(file => {
+        const reader = new FileReader();
+        reader.onload = function(ev) {
+            const img = document.createElement('img');
+            img.src = ev.target.result;
+            container.appendChild(img);
+        };
+        reader.readAsDataURL(file);
+    });
+});
+
+// Click en upload para abrir selector
+document.getElementById('imageUpload').addEventListener('click', function() {
+    document.getElementById('productImage').click();
+});
+
+document.getElementById('galleryUpload').addEventListener('click', function() {
+    document.getElementById('galleryImages').click();
+});
+</script>
+{% endblock %}

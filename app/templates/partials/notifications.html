@@ -1,0 +1,251 @@
+{% if current_user.is_authenticated %}
+<div class="notification-bell">
+    <button onclick="toggleNotifications()" class="bell-btn">
+        <i class="fas fa-bell"></i>
+        <span class="notification-badge" id="notificationBadge">0</span>
+    </button>
+    
+    <div class="notification-dropdown" id="notificationDropdown">
+        <div class="notification-header">
+            <h3>Notificaciones</h3>
+            <button onclick="markAllRead()" class="mark-all-read">Marcar todas como leídas</button>
+        </div>
+        
+        <div class="notification-list" id="notificationList">
+            <div class="loading-notifications">
+                <i class="fas fa-spinner fa-spin"></i> Cargando...
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.notification-bell {
+    position: relative;
+}
+
+.bell-btn {
+    position: relative;
+    background: none;
+    border: none;
+    font-size: 1.2rem;
+    color: #64748B;
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 50%;
+    transition: background 0.3s;
+}
+
+.bell-btn:hover {
+    background: rgba(16, 185, 129, 0.1);
+}
+
+.notification-badge {
+    position: absolute;
+    top: 0;
+    right: 0;
+    background: #EF4444;
+    color: white;
+    font-size: 0.7rem;
+    font-weight: 700;
+    padding: 2px 6px;
+    border-radius: 50%;
+    min-width: 18px;
+    text-align: center;
+}
+
+.notification-dropdown {
+    display: none;
+    position: absolute;
+    right: 0;
+    top: 100%;
+    width: 360px;
+    max-height: 400px;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+    border: 1px solid #E2E8F0;
+    overflow: hidden;
+    z-index: 1000;
+}
+
+.notification-dropdown.show {
+    display: block;
+}
+
+.notification-header {
+    padding: 16px 20px;
+    border-bottom: 1px solid #E2E8F0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.notification-header h3 {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 700;
+}
+
+.mark-all-read {
+    background: none;
+    border: none;
+    color: #10B981;
+    font-size: 0.8rem;
+    cursor: pointer;
+}
+
+.notification-list {
+    max-height: 340px;
+    overflow-y: auto;
+}
+
+.notification-item {
+    padding: 12px 20px;
+    border-bottom: 1px solid #F1F5F9;
+    cursor: pointer;
+    transition: background 0.3s;
+}
+
+.notification-item:hover {
+    background: #F8FAFC;
+}
+
+.notification-item.unread {
+    background: #ECFDF5;
+    border-left: 3px solid #10B981;
+}
+
+.notification-item .notification-title {
+    font-weight: 600;
+    font-size: 0.9rem;
+    margin-bottom: 4px;
+}
+
+.notification-item .notification-message {
+    font-size: 0.85rem;
+    color: #64748B;
+}
+
+.notification-item .notification-time {
+    font-size: 0.75rem;
+    color: #94A3B8;
+    margin-top: 4px;
+}
+
+.loading-notifications {
+    padding: 30px;
+    text-align: center;
+    color: #94A3B8;
+}
+
+.empty-notifications {
+    padding: 30px;
+    text-align: center;
+    color: #94A3B8;
+}
+
+.empty-notifications i {
+    font-size: 2rem;
+    margin-bottom: 8px;
+}
+</style>
+
+<script>
+let notificationsLoaded = false;
+
+function toggleNotifications() {
+    const dropdown = document.getElementById('notificationDropdown');
+    dropdown.classList.toggle('show');
+    
+    if (!notificationsLoaded) {
+        loadNotifications();
+    }
+}
+
+function loadNotifications() {
+    const container = document.getElementById('notificationList');
+    
+    fetch('/api/notifications')
+        .then(res => res.json())
+        .then(data => {
+            notificationsLoaded = true;
+            
+            if (data.success && data.data.length > 0) {
+                container.innerHTML = data.data.map(n => `
+                    <div class="notification-item ${n.is_read ? '' : 'unread'}" 
+                         onclick="markNotification('${n.id}')">
+                        <div class="notification-title">${n.title}</div>
+                        <div class="notification-message">${n.message}</div>
+                        <div class="notification-time">${new Date(n.created_at).toLocaleDateString()}</div>
+                    </div>
+                `).join('');
+                
+                updateBadge(data.data.filter(n => !n.is_read).length);
+            } else {
+                container.innerHTML = `
+                    <div class="empty-notifications">
+                        <i class="fas fa-inbox"></i>
+                        <p>No tienes notificaciones</p>
+                    </div>
+                `;
+            }
+        })
+        .catch(() => {
+            container.innerHTML = `
+                <div class="empty-notifications">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <p>Error al cargar notificaciones</p>
+                </div>
+            `;
+        });
+}
+
+function markNotification(id) {
+    fetch(`/api/notifications/${id}/read`, { method: 'POST' })
+        .then(() => {
+            loadNotifications();
+            updateBadge();
+        });
+}
+
+function markAllRead() {
+    fetch('/api/notifications/mark-all-read', { method: 'POST' })
+        .then(() => {
+            loadNotifications();
+            updateBadge(0);
+        });
+}
+
+function updateBadge(count) {
+    const badge = document.getElementById('notificationBadge');
+    if (badge) {
+        if (count > 0) {
+            badge.textContent = count;
+            badge.style.display = 'block';
+        } else {
+            badge.style.display = 'none';
+        }
+    }
+}
+
+// Cerrar dropdown al hacer clic fuera
+document.addEventListener('click', function(e) {
+    const bell = document.querySelector('.notification-bell');
+    if (bell && !bell.contains(e.target)) {
+        document.getElementById('notificationDropdown').classList.remove('show');
+    }
+});
+
+// Verificar notificaciones cada 30 segundos
+setInterval(() => {
+    if (notificationsLoaded) {
+        fetch('/api/notifications/unread')
+            .then(res => res.json())
+            .then(data => {
+                updateBadge(data.count);
+            });
+    }
+}, 30000);
+</script>
+{% endif %}

@@ -1,0 +1,58 @@
+<nav class="navbar" data-aos="fade-down">
+    <div class="container">
+        <div class="navbar-brand" onclick="location.href='{{ url_for('index') }}'">
+            <i class="fas fa-store-alt"></i>
+            <span>MiZona</span>
+        </div>
+        
+        <div class="navbar-links">
+            <a href="{{ url_for('index') }}">Inicio</a>
+            <a href="{{ url_for('product.list') }}">Productos</a>
+            
+            {% if current_user.is_authenticated %}
+                {% if current_user.is_admin() %}
+                    <a href="{{ url_for('admin.dashboard') }}" class="admin-link">
+                        <i class="fas fa-crown"></i> Admin
+                    </a>
+                {% elif current_user.is_vendor() %}
+                    <a href="{{ url_for('store.dashboard') }}" class="vendor-link">
+                        <i class="fas fa-store"></i> Mi Tienda
+                    </a>
+                {% endif %}
+                
+                <div class="navbar-dropdown">
+                    <button class="dropdown-toggle">
+                        <img src="{{ current_user.avatar_url or 'https://ui-avatars.com/api/?name=' + current_user.full_name|urlencode + '&background=10B981&color=fff' }}" 
+                             alt="{{ current_user.full_name }}" class="avatar">
+                        <span>{{ current_user.full_name }}</span>
+                        <i class="fas fa-chevron-down"></i>
+                    </button>
+                    <div class="dropdown-menu">
+                        <a href="#"><i class="fas fa-user"></i> Perfil</a>
+                        <a href="#"><i class="fas fa-heart"></i> Favoritos</a>
+                        <a href="#"><i class="fas fa-shopping-bag"></i> Mis Pedidos</a>
+                        <a href="#"><i class="fas fa-bell"></i> Notificaciones</a>
+                        <hr>
+                        <a href="{{ url_for('auth.logout') }}" class="logout-link">
+                            <i class="fas fa-sign-out-alt"></i> Cerrar Sesión
+                        </a>
+                    </div>
+                </div>
+            {% else %}
+                <a href="{{ url_for('auth.login') }}" class="btn-login">Iniciar Sesión</a>
+                <a href="{{ url_for('auth.register') }}" class="btn-register">Registrarse</a>
+            {% endif %}
+        </div>
+        
+        <button class="navbar-toggle" onclick="toggleNavbar()">
+            <i class="fas fa-bars"></i>
+        </button>
+    </div>
+</nav>
+
+<script>
+function toggleNavbar() {
+    const links = document.querySelector('.navbar-links');
+    links.classList.toggle('active');
+}
+</script>

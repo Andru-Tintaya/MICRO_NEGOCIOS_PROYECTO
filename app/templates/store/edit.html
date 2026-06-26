@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+
+{% block title %}Editar Tienda - {{ store.name }}{% endblock %}
+
+{% block content %}
+<div class="auth-container">
+    <div class="auth-card" data-aos="fade-up">
+        <div class="auth-header">
+            <i class="fas fa-store"></i>
+            <h2>Editar Tienda</h2>
+            <p>Actualiza la información de tu negocio</p>
+        </div>
+        
+        <form method="POST" enctype="multipart/form-data">
+            <div class="form-group">
+                <label><i class="fas fa-store"></i> Nombre de la Tienda *</label>
+                <input type="text" name="name" value="{{ store.name }}" required>
+            </div>
+            
+            <div class="form-group">
+                <label><i class="fas fa-align-left"></i> Descripción</label>
+                <textarea name="description" rows="3">{{ store.description or '' }}</textarea>
+            </div>
+            
+            <div class="form-group">
+                <label><i class="fab fa-whatsapp"></i> WhatsApp de Contacto *</label>
+                <input type="tel" name="whatsapp" value="{{ store.whatsapp }}" required>
+            </div>
+            
+            <div class="form-group">
+                <label><i class="fas fa-map-marker-alt"></i> Ciudad *</label>
+                <select name="city" required>
+                    <option value="Santa Cruz" {% if store.city == 'Santa Cruz' %}selected{% endif %}>Santa Cruz</option>
+                    <option value="La Paz" {% if store.city == 'La Paz' %}selected{% endif %}>La Paz</option>
+                    <option value="Cochabamba" {% if store.city == 'Cochabamba' %}selected{% endif %}>Cochabamba</option>
+                    <option value="El Alto" {% if store.city == 'El Alto' %}selected{% endif %}>El Alto</option>
+                    <option value="Tarija" {% if store.city == 'Tarija' %}selected{% endif %}>Tarija</option>
+                    <option value="Sucre" {% if store.city == 'Sucre' %}selected{% endif %}>Sucre</option>
+                    <option value="Potosi" {% if store.city == 'Potosi' %}selected{% endif %}>Potosí</option>
+                    <option value="Oruro" {% if store.city == 'Oruro' %}selected{% endif %}>Oruro</option>
+                    <option value="Beni" {% if store.city == 'Beni' %}selected{% endif %}>Beni</option>
+                    <option value="Pando" {% if store.city == 'Pando' %}selected{% endif %}>Pando</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label><i class="fas fa-map-pin"></i> Dirección</label>
+                <input type="text" name="address" value="{{ store.address or '' }}" placeholder="Calle, número, zona...">
+            </div>
+            
+            <div class="form-group">
+                <label><i class="fas fa-tag"></i> Categoría Principal</label>
+                <select name="category_id">
+                    <option value="">Sin categoría</option>
+                    {% for category in categories %}
+                    <option value="{{ category.id }}" {% if store.category_id == category.id %}selected{% endif %}>
+                        {{ category.name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label><i class="fas fa-image"></i> Logo de la Tienda</label>
+                <div class="image-upload">
+                    {% if store.logo_url %}
+                    <img src="{{ store.logo_url }}" style="max-width: 150px; margin-bottom: 10px;">
+                    {% endif %}
+                    <input type="file" name="logo" accept="image/*">
+                </div>
+            </div>
+            
+            <div class="form-group checkbox">
+                <label>
+                    <input type="checkbox" name="is_active" {% if store.is_active %}checked{% endif %}> Tienda Activa
+                </label>
+            </div>
+            
+            <button type="submit" class="btn-primary btn-block">
+                <i class="fas fa-save"></i> Actualizar Tienda
+            </button>
+        </form>
+        
+        <div style="margin-top: 20px; text-align: center;">
+            <form method="POST" action="{{ url_for('store.delete') }}" 
+                  onsubmit="return confirm('¿Estás seguro de desactivar tu tienda?')">
+                <button type="submit" class="btn-danger" style="background: #EF4444; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer;">
+                    <i class="fas fa-trash"></i> Desactivar Tienda
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

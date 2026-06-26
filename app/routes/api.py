@@ -1,0 +1,545 @@
+from flask import Blueprint, request, jsonify, current_app
+from flask_login import login_required, current_user
+from app.extensions import db, csrf  # <--- IMPORTAR csrf
+from app.models.product import Product
+from app.models.store import Store
+from app.models.review import Review
+from app.models.favorite import Favorite
+from app.models.follower import Follower
+from app.models.category import Category
+from app.models.order import Order, OrderItem
+from app.utils.decorators import vendor_required, customer_required
+from app.utils.helpers import slugify, save_image, delete_image
+from datetime import datetime
+import uuid
+import traceback
+
+api_bp = Blueprint('api', __name__, url_prefix='/api')
+
+# === CATEGORÍAS API ===
+
+@api_bp.route('/categories', methods=['GET'])
+def get_categories():
+    categories = Category.query.all()
+    return jsonify({
+        'success': True,
+        'data': [{
+            'id': c.id,
+            'name': c.name,
+            'slug': c.slug,
+            'icon': c.icon,
+            'product_count': len(c.products)
+        } for c in categories]
+    })
+
+# === PRODUCTOS API ===
+
+@api_bp.route('/products', methods=['GET'])
+def get_products():
+    category_id = request.args.get('category_id')
+    store_id = request.args.get('store_id')
+    search = request.args.get('search', '')
+    min_price = request.args.get('min_price', type=float)
+    max_price = request.args.get('max_price', type=float)
+    sort_by = request.args.get('sort_by', 'created_at')
+    limit = request.args.get('limit', 20, type=int)
+    offset = request.args.get('offset', 0, type=int)
+    
+    query = Product.query.filter_by(is_active=True)
+    
+    if category_id:
+        query = query.filter_by(category_id=category_id)
+    
+    if store_id:
+        query = query.filter_by(store_id=store_id)
+    
+    if search:
+        query = query.filter(
+            Product.name.ilike(f'%{search}%') | 
+            Product.description.ilike(f'%{search}%')
+        )
+    
+    if min_price:
+        query = query.filter(Product.price >= min_price)
+    
+    if max_price:
+        query = query.filter(Product.price <= max_price)
+    
+    if sort_by == 'price_asc':
+        query = query.order_by(Product.price.asc())
+    elif sort_by == 'price_desc':
+        query = query.order_by(Product.price.desc())
+    elif sort_by == 'rating':
+        query = query.order_by(Product.rating_avg.desc())
+    elif sort_by == 'sold':
+        query = query.order_by(Product.sold_count.desc())
+    else:
+        query = query.order_by(Product.created_at.desc())
+    
+    products = query.limit(limit).offset(offset).all()
+    total = query.count()
+    
+    return jsonify({
+        'success': True,
+        'data': [p.to_dict() for p in products],
+        'total': total,
+        'limit': limit,
+        'offset': offset
+    })
+
+@api_bp.route('/products/<product_id>', methods=['GET'])
+def get_product(product_id):
+    product = Product.query.get_or_404(product_id)
+    return jsonify({
+        'success': True,
+        'data': product.to_dict()
+    })
+
+# --- RUTAS POST, PUT, DELETE CON CSRF DESACTIVADO ---
+
+@api_bp.route('/products', methods=['POST'])
+@csrf.exempt  # <--- DESACTIVAR CSRF
+@login_required
+def create_product_api():
+    print("=" * 50)
+    print("📥 RECIBIDA SOLICITUD POST /api/products")
+    print("=" * 50)
+    
+    try:
+        # Verificar que el usuario tenga tienda
+        store = Store.query.filter_by(user_id=current_user.id).first()
+        print(f"👤 Usuario: {current_user.id} - {current_user.full_name}")
+        print(f"🏪 Store: {store.id if store else 'No tiene tienda'}")
+        
+        if not store:
+            print("❌ ERROR: Usuario no tiene tienda")
+            return jsonify({'success': False, 'error': 'No tienes una tienda. Crea una primero.'}), 400
+        
+        # Obtener datos del formulario
+        name = request.form.get('name')
+        price = request.form.get('price')
+        description = request.form.get('description', '')
+        stock = request.form.get('stock', 0)
+        category_id = request.form.get('category_id')
+        
+        print(f"📝 Datos recibidos:")
+        print(f"   - Nombre: {name}")
+        print(f"   - Precio: {price}")
+        print(f"   - Descripción: {description[:50]}..." if description else "   - Descripción: (vacío)")
+        print(f"   - Stock: {stock}")
+        print(f"   - Categoría: {category_id}")
+        print(f"   - Imagen: {request.files.get('image').filename if request.files.get('image') else 'No'}")
+        
+        # Validaciones
+        if not name:
+            print("❌ ERROR: Nombre faltante")
+            return jsonify({'success': False, 'error': 'El nombre del producto es obligatorio'}), 400
+        
+        if not price:
+            print("❌ ERROR: Precio faltante")
+            return jsonify({'success': False, 'error': 'El precio del producto es obligatorio'}), 400
+        
+        try:
+            price_float = float(price)
+            print(f"   - Precio convertido: {price_float}")
+        except ValueError:
+            print(f"❌ ERROR: Precio inválido: {price}")
+            return jsonify({'success': False, 'error': 'El precio debe ser un número válido'}), 400
+        
+        try:
+            stock_int = int(stock) if stock else 0
+        except ValueError:
+            stock_int = 0
+        
+        # Crear producto
+        product = Product(
+            store_id=store.id,
+            name=name,
+            slug=slugify(name),
+            price=price_float,
+            description=description,
+            stock=stock_int,
+            is_active=True
+        )
+        
+        if category_id:
+            product.category_id = category_id
+        
+        # Subir imagen
+        if 'image' in request.files:
+            file = request.files['image']
+            if file and file.filename:
+                print(f"📷 Subiendo imagen: {file.filename}")
+                try:
+                    filename = save_image(file, f'products/{store.id}')
+                    product.image_url = filename
+                    print(f"✅ Imagen guardada: {filename}")
+                except Exception as img_error:
+                    print(f"⚠️ Error al subir imagen: {str(img_error)}")
+        
+        db.session.add(product)
+        db.session.commit()
+        print(f"✅ Producto creado con ID: {product.id}")
+        
+        # Actualizar contador
+        store.products_count = Product.query.filter_by(store_id=store.id).count()
+        db.session.commit()
+        print(f"📊 Productos totales en tienda: {store.products_count}")
+        print("=" * 50)
+        
+        return jsonify({
+            'success': True,
+            'message': 'Producto creado exitosamente',
+            'data': product.to_dict()
+        }), 201
+        
+    except Exception as e:
+        db.session.rollback()
+        print(f"❌ ERROR EXCEPCIÓN: {str(e)}")
+        print(traceback.format_exc())
+        print("=" * 50)
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@api_bp.route('/products/<product_id>', methods=['PUT'])
+@csrf.exempt  # <--- DESACTIVAR CSRF
+@login_required
+def update_product_api(product_id):
+    print("=" * 50)
+    print(f"📥 RECIBIDA SOLICITUD PUT /api/products/{product_id}")
+    print("=" * 50)
+    
+    try:
+        product = Product.query.get_or_404(product_id)
+        store = Store.query.filter_by(user_id=current_user.id).first()
+        
+        print(f"👤 Usuario: {current_user.id}")
+        print(f"📦 Producto: {product.name} (ID: {product.id})")
+        print(f"🏪 Store: {store.id if store else 'No tiene tienda'}")
+        
+        if product.store_id != store.id:
+            print(f"❌ ERROR: Usuario no es dueño del producto")
+            return jsonify({'success': False, 'error': 'No autorizado'}), 403
+        
+        # Obtener datos
+        name = request.form.get('name', product.name)
+        price = request.form.get('price', product.price)
+        description = request.form.get('description', product.description)
+        stock = request.form.get('stock', product.stock)
+        category_id = request.form.get('category_id', product.category_id)
+        is_active = request.form.get('is_active') == 'on'
+        is_featured = request.form.get('is_featured') == 'on'
+        
+        print(f"📝 Actualizando datos:")
+        print(f"   - Nombre: {name}")
+        print(f"   - Precio: {price}")
+        print(f"   - Stock: {stock}")
+        
+        product.name = name
+        product.price = float(price) if price else product.price
+        product.description = description
+        product.stock = int(stock) if stock else 0
+        product.category_id = category_id
+        product.is_active = is_active
+        product.is_featured = is_featured
+        
+        # Actualizar imagen
+        if 'image' in request.files:
+            file = request.files['image']
+            if file and file.filename:
+                print(f"📷 Actualizando imagen: {file.filename}")
+                if product.image_url:
+                    delete_image(product.image_url)
+                filename = save_image(file, f'products/{store.id}')
+                product.image_url = filename
+                print(f"✅ Imagen actualizada: {filename}")
+        
+        db.session.commit()
+        print(f"✅ Producto actualizado correctamente")
+        print("=" * 50)
+        
+        return jsonify({
+            'success': True,
+            'message': 'Producto actualizado exitosamente',
+            'data': product.to_dict()
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        print(f"❌ ERROR EXCEPCIÓN: {str(e)}")
+        print(traceback.format_exc())
+        print("=" * 50)
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@api_bp.route('/products/<product_id>', methods=['DELETE'])
+@csrf.exempt  # <--- DESACTIVAR CSRF
+@login_required
+def delete_product_api(product_id):
+    print("=" * 50)
+    print(f"📥 RECIBIDA SOLICITUD DELETE /api/products/{product_id}")
+    print("=" * 50)
+    
+    try:
+        product = Product.query.get_or_404(product_id)
+        store = Store.query.filter_by(user_id=current_user.id).first()
+        
+        if product.store_id != store.id:
+            print(f"❌ ERROR: Usuario no es dueño del producto")
+            return jsonify({'success': False, 'error': 'No autorizado'}), 403
+        
+        if product.image_url:
+            delete_image(product.image_url)
+            print(f"🗑️ Imagen eliminada: {product.image_url}")
+        
+        db.session.delete(product)
+        db.session.commit()
+        
+        store.products_count = Product.query.filter_by(store_id=store.id).count()
+        db.session.commit()
+        
+        print(f"✅ Producto eliminado correctamente")
+        print("=" * 50)
+        
+        return jsonify({'success': True, 'message': 'Producto eliminado exitosamente'})
+        
+    except Exception as e:
+        db.session.rollback()
+        print(f"❌ ERROR EXCEPCIÓN: {str(e)}")
+        print(traceback.format_exc())
+        print("=" * 50)
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+# === RESEÑAS API ===
+
+@api_bp.route('/reviews', methods=['POST'])
+@csrf.exempt  # <--- DESACTIVAR CSRF
+@login_required
+def create_review():
+    try:
+        data = request.json
+        product_id = data.get('product_id')
+        rating = data.get('rating')
+        comment = data.get('comment')
+        
+        if not product_id or not rating:
+            return jsonify({'error': 'Producto y calificación son obligatorios'}), 400
+        
+        product = Product.query.get(product_id)
+        if not product:
+            return jsonify({'error': 'Producto no encontrado'}), 404
+        
+        existing = Review.query.filter_by(
+            user_id=current_user.id,
+            product_id=product_id
+        ).first()
+        
+        if existing:
+            return jsonify({'error': 'Ya has reseñado este producto'}), 400
+        
+        review = Review(
+            user_id=current_user.id,
+            product_id=product_id,
+            store_id=product.store_id,
+            rating=int(rating),
+            comment=comment
+        )
+        
+        db.session.add(review)
+        db.session.commit()
+        
+        # Actualizar rating del producto
+        product_reviews = Review.query.filter_by(product_id=product_id).all()
+        product.rating_avg = sum(r.rating for r in product_reviews) / len(product_reviews)
+        product.rating_count = len(product_reviews)
+        db.session.commit()
+        
+        # Actualizar rating de la tienda
+        store = Store.query.get(product.store_id)
+        store_reviews = Review.query.filter_by(store_id=store.id).all()
+        store.rating_avg = sum(r.rating for r in store_reviews) / len(store_reviews)
+        store.rating_count = len(store_reviews)
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'data': review.to_dict()
+        }), 201
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 400
+
+@api_bp.route('/reviews/<product_id>', methods=['GET'])
+def get_product_reviews(product_id):
+    reviews = Review.query.filter_by(product_id=product_id).order_by(Review.created_at.desc()).all()
+    return jsonify({
+        'success': True,
+        'data': [r.to_dict() for r in reviews]
+    })
+
+# === FAVORITOS API ===
+
+@api_bp.route('/favorites', methods=['POST'])
+@csrf.exempt  # <--- DESACTIVAR CSRF
+@login_required
+def toggle_favorite():
+    try:
+        product_id = request.json.get('product_id')
+        
+        if not product_id:
+            return jsonify({'error': 'Producto requerido'}), 400
+        
+        favorite = Favorite.query.filter_by(
+            user_id=current_user.id,
+            product_id=product_id
+        ).first()
+        
+        if favorite:
+            db.session.delete(favorite)
+            db.session.commit()
+            return jsonify({'success': True, 'action': 'removed'})
+        else:
+            favorite = Favorite(
+                user_id=current_user.id,
+                product_id=product_id
+            )
+            db.session.add(favorite)
+            db.session.commit()
+            return jsonify({'success': True, 'action': 'added'})
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 400
+
+@api_bp.route('/favorites', methods=['GET'])
+@login_required
+def get_favorites():
+    favorites = Favorite.query.filter_by(user_id=current_user.id).all()
+    products = [f.product for f in favorites if f.product and f.product.is_active]
+    
+    return jsonify({
+        'success': True,
+        'data': [p.to_dict() for p in products]
+    })
+
+# === FOLLOWERS API ===
+
+@api_bp.route('/followers', methods=['POST'])
+@csrf.exempt  # <--- DESACTIVAR CSRF
+@login_required
+def toggle_follower():
+    try:
+        store_id = request.json.get('store_id')
+        
+        if not store_id:
+            return jsonify({'error': 'Tienda requerida'}), 400
+        
+        follower = Follower.query.filter_by(
+            user_id=current_user.id,
+            store_id=store_id
+        ).first()
+        
+        if follower:
+            db.session.delete(follower)
+            db.session.commit()
+            
+            store = Store.query.get(store_id)
+            if store:
+                store.followers_count = Follower.query.filter_by(store_id=store_id).count()
+                db.session.commit()
+            
+            return jsonify({'success': True, 'action': 'unfollowed'})
+        else:
+            follower = Follower(
+                user_id=current_user.id,
+                store_id=store_id
+            )
+            db.session.add(follower)
+            db.session.commit()
+            
+            store = Store.query.get(store_id)
+            if store:
+                store.followers_count = Follower.query.filter_by(store_id=store_id).count()
+                db.session.commit()
+            
+            return jsonify({'success': True, 'action': 'followed'})
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 400
+
+@api_bp.route('/followers/<store_id>', methods=['GET'])
+@login_required
+def get_followers(store_id):
+    count = Follower.query.filter_by(store_id=store_id).count()
+    is_following = Follower.query.filter_by(
+        user_id=current_user.id,
+        store_id=store_id
+    ).first() is not None
+    
+    return jsonify({
+        'success': True,
+        'count': count,
+        'is_following': is_following
+    })
+
+# === ÓRDENES API ===
+
+@api_bp.route('/orders', methods=['POST'])
+@csrf.exempt  # <--- DESACTIVAR CSRF
+@login_required
+@customer_required
+def create_order_api():
+    try:
+        data = request.json
+        
+        # Crear número de orden
+        order_number = f"MZ-{datetime.utcnow().strftime('%Y%m')}-{uuid.uuid4().hex[:4].upper()}"
+        
+        items = data.get('items', [])
+        subtotal = sum(item['price'] * item['quantity'] for item in items)
+        shipping_cost = data.get('shipping_cost', 0)
+        discount = data.get('discount', 0)
+        total = subtotal + shipping_cost - discount
+        
+        order = Order(
+            store_id=data['store_id'],
+            user_id=current_user.id,
+            order_number=order_number,
+            status='pendiente',
+            subtotal=subtotal,
+            shipping_cost=shipping_cost,
+            discount=discount,
+            total=total,
+            shipping_address=data.get('shipping_address'),
+            shipping_city=data.get('shipping_city'),
+            notes=data.get('notes')
+        )
+        
+        db.session.add(order)
+        db.session.commit()
+        
+        for item_data in items:
+            product = Product.query.get(item_data['product_id'])
+            order_item = OrderItem(
+                order_id=order.id,
+                product_id=item_data['product_id'],
+                quantity=item_data['quantity'],
+                price=item_data['price'],
+                subtotal=item_data['price'] * item_data['quantity']
+            )
+            db.session.add(order_item)
+            
+            if product:
+                product.stock -= item_data['quantity']
+                product.sold_count += item_data['quantity']
+        
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'data': order.to_dict()
+        }), 201
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 400

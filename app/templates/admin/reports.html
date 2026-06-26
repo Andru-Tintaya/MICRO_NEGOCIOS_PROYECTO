@@ -1,0 +1,487 @@
+{% extends "base.html" %}
+
+{% block title %}Reportes - Administración{% endblock %}
+
+{% block content %}
+<div class="admin-container">
+    <!-- Sidebar -->
+    <aside class="admin-sidebar">
+        <div class="sidebar-header">
+            <i class="fas fa-crown"></i>
+            <h2>Admin</h2>
+            <p>Panel de Control</p>
+        </div>
+        
+        <nav class="sidebar-nav">
+            <a href="{{ url_for('admin.dashboard') }}" class="nav-item">
+                <i class="fas fa-chart-pie"></i> Dashboard
+            </a>
+            <a href="{{ url_for('admin.users') }}" class="nav-item">
+                <i class="fas fa-users"></i> Usuarios
+            </a>
+            <a href="#" class="nav-item active">
+                <i class="fas fa-file-alt"></i> Reportes
+            </a>
+            <a href="{{ url_for('auth.logout') }}" class="nav-item logout">
+                <i class="fas fa-sign-out-alt"></i> Cerrar Sesión
+            </a>
+        </nav>
+    </aside>
+    
+    <!-- Main Content -->
+    <main class="admin-content">
+        <header class="admin-header">
+            <h1>Reportes y Estadísticas</h1>
+            <div class="admin-user">
+                <span>{{ current_user.full_name }}</span>
+                <span class="role-badge">Administrador</span>
+            </div>
+        </header>
+        
+        <!-- Report Filters -->
+        <div class="report-filters">
+            <div class="filter-group">
+                <label>Tipo de Reporte</label>
+                <select id="reportType" onchange="changeReport()">
+                    <option value="sales">Ventas</option>
+                    <option value="users">Usuarios</option>
+                    <option value="products">Productos</option>
+                    <option value="stores">Tiendas</option>
+                </select>
+            </div>
+            
+            <div class="filter-group">
+                <label>Período</label>
+                <select id="reportPeriod">
+                    <option value="today">Hoy</option>
+                    <option value="week">Esta Semana</option>
+                    <option value="month" selected>Este Mes</option>
+                    <option value="year">Este Año</option>
+                    <option value="custom">Personalizado</option>
+                </select>
+            </div>
+            
+            <div class="filter-group" id="dateRange" style="display: none;">
+                <label>Desde</label>
+                <input type="date" id="startDate">
+                <label>Hasta</label>
+                <input type="date" id="endDate">
+            </div>
+            
+            <button class="btn-generate" onclick="generateReport()">
+                <i class="fas fa-file-export"></i> Generar Reporte
+            </button>
+        </div>
+        
+        <!-- Report Cards -->
+        <div class="report-cards">
+            <div class="report-card">
+                <h3><i class="fas fa-shopping-cart"></i> Total Ventas</h3>
+                <div class="report-value" id="totalSales">Bs 0.00</div>
+                <span class="report-change positive">+12.5%</span>
+            </div>
+            
+            <div class="report-card">
+                <h3><i class="fas fa-users"></i> Nuevos Usuarios</h3>
+                <div class="report-value" id="newUsers">0</div>
+                <span class="report-change positive">+8.3%</span>
+            </div>
+            
+            <div class="report-card">
+                <h3><i class="fas fa-box"></i> Productos Vendidos</h3>
+                <div class="report-value" id="productsSold">0</div>
+                <span class="report-change negative">-2.1%</span>
+            </div>
+            
+            <div class="report-card">
+                <h3><i class="fas fa-store"></i> Tiendas Activas</h3>
+                <div class="report-value" id="activeStores">0</div>
+                <span class="report-change positive">+5.0%</span>
+            </div>
+        </div>
+        
+        <!-- Report Chart -->
+        <div class="report-chart">
+            <h3>Ventas por Período</h3>
+            <canvas id="reportChart"></canvas>
+        </div>
+        
+        <!-- Export Buttons -->
+        <div class="export-buttons">
+            <button class="btn-export" onclick="exportReport('pdf')">
+                <i class="fas fa-file-pdf"></i> Exportar PDF
+            </button>
+            <button class="btn-export" onclick="exportReport('excel')">
+                <i class="fas fa-file-excel"></i> Exportar Excel
+            </button>
+            <button class="btn-export" onclick="exportReport('csv')">
+                <i class="fas fa-file-csv"></i> Exportar CSV
+            </button>
+        </div>
+        
+        <!-- Report Table -->
+        <div class="report-table-container">
+            <h3>Detalle del Reporte</h3>
+            <table class="report-table">
+                <thead>
+                    <tr>
+                        <th>Fecha</th>
+                        <th>Usuario</th>
+                        <th>Producto</th>
+                        <th>Cantidad</th>
+                        <th>Total</th>
+                        <th>Estado</th>
+                    </tr>
+                </thead>
+                <tbody id="reportTableBody">
+                    <tr>
+                        <td colspan="6" class="empty-row">Selecciona un período para generar el reporte</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </main>
+</div>
+
+<style>
+/* Report Filters */
+.report-filters {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    background: white;
+    padding: 20px;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.filter-group label {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #64748B;
+}
+
+.filter-group select,
+.filter-group input {
+    padding: 8px 12px;
+    border: 1px solid #E2E8F0;
+    border-radius: 8px;
+    background: white;
+    outline: none;
+    min-width: 140px;
+}
+
+#dateRange {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+}
+
+#dateRange label {
+    font-size: 0.8rem;
+}
+
+#dateRange input {
+    padding: 6px 10px;
+    min-width: 120px;
+}
+
+.btn-generate {
+    padding: 10px 24px;
+    background: #10B981;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.3s;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.btn-generate:hover {
+    background: #059669;
+}
+
+/* Report Cards */
+.report-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+    margin-bottom: 30px;
+}
+
+.report-card {
+    background: white;
+    padding: 20px;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.report-card h3 {
+    font-size: 0.9rem;
+    color: #64748B;
+    margin-bottom: 8px;
+}
+
+.report-card h3 i {
+    margin-right: 8px;
+}
+
+.report-value {
+    font-size: 1.8rem;
+    font-weight: 800;
+    margin-bottom: 4px;
+}
+
+.report-change {
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.report-change.positive {
+    color: #10B981;
+}
+
+.report-change.negative {
+    color: #EF4444;
+}
+
+/* Report Chart */
+.report-chart {
+    background: white;
+    padding: 20px;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    margin-bottom: 24px;
+}
+
+.report-chart h3 {
+    font-size: 1rem;
+    margin-bottom: 16px;
+}
+
+.report-chart canvas {
+    max-height: 300px;
+}
+
+/* Export Buttons */
+.export-buttons {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+}
+
+.btn-export {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.btn-export:hover {
+    transform: translateY(-2px);
+}
+
+.btn-export:first-child {
+    background: #EF4444;
+    color: white;
+}
+
+.btn-export:first-child:hover {
+    background: #DC2626;
+}
+
+.btn-export:nth-child(2) {
+    background: #10B981;
+    color: white;
+}
+
+.btn-export:nth-child(2):hover {
+    background: #059669;
+}
+
+.btn-export:last-child {
+    background: #3B82F6;
+    color: white;
+}
+
+.btn-export:last-child:hover {
+    background: #2563EB;
+}
+
+/* Report Table */
+.report-table-container {
+    background: white;
+    padding: 20px;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    overflow-x: auto;
+}
+
+.report-table-container h3 {
+    font-size: 1rem;
+    margin-bottom: 16px;
+}
+
+.report-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.report-table th {
+    padding: 12px;
+    text-align: left;
+    background: #F8FAFC;
+    font-weight: 600;
+    font-size: 0.85rem;
+    color: #64748B;
+    border-bottom: 2px solid #E2E8F0;
+}
+
+.report-table td {
+    padding: 10px 12px;
+    border-bottom: 1px solid #F1F5F9;
+}
+
+.report-table .empty-row {
+    text-align: center;
+    color: #94A3B8;
+    padding: 40px !important;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .report-filters {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .filter-group select,
+    .filter-group input {
+        width: 100%;
+    }
+    
+    #dateRange {
+        flex-wrap: wrap;
+    }
+    
+    .report-cards {
+        grid-template-columns: 1fr 1fr;
+    }
+    
+    .export-buttons {
+        flex-direction: column;
+    }
+}
+</style>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+let reportChart = null;
+
+function changeReport() {
+    const type = document.getElementById('reportType').value;
+    const period = document.getElementById('reportPeriod').value;
+    
+    // Mostrar/ocultar rango personalizado
+    document.getElementById('dateRange').style.display = period === 'custom' ? 'flex' : 'none';
+}
+
+function generateReport() {
+    const type = document.getElementById('reportType').value;
+    const period = document.getElementById('reportPeriod').value;
+    
+    // Simular datos (en producción vendrían de la API)
+    const data = {
+        labels: ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'],
+        values: [1200, 1900, 1500, 2200, 2800, 3100, 2500]
+    };
+    
+    // Actualizar valores de resumen
+    document.getElementById('totalSales').textContent = 'Bs ' + data.values.reduce((a, b) => a + b, 0).toFixed(2);
+    document.getElementById('newUsers').textContent = Math.floor(Math.random() * 50) + 10;
+    document.getElementById('productsSold').textContent = Math.floor(Math.random() * 200) + 50;
+    document.getElementById('activeStores').textContent = Math.floor(Math.random() * 30) + 10;
+    
+    // Actualizar gráfica
+    if (reportChart) {
+        reportChart.destroy();
+    }
+    
+    const ctx = document.getElementById('reportChart');
+    reportChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: data.labels,
+            datasets: [{
+                label: 'Ventas (Bs)',
+                data: data.values,
+                backgroundColor: 'rgba(16, 185, 129, 0.2)',
+                borderColor: '#10B981',
+                borderWidth: 3,
+                tension: 0.4,
+                fill: true
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    display: false
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: function(value) {
+                            return 'Bs ' + value;
+                        }
+                    }
+                }
+            }
+        }
+    });
+    
+    // Actualizar tabla
+    const tbody = document.getElementById('reportTableBody');
+    tbody.innerHTML = Array.from({length: 10}, (_, i) => `
+        <tr>
+            <td>${new Date(Date.now() - i * 86400000).toLocaleDateString()}</td>
+            <td>Usuario ${i + 1}</td>
+            <td>Producto ${i + 1}</td>
+            <td>${Math.floor(Math.random() * 5) + 1}</td>
+            <td>Bs ${(Math.random() * 200 + 50).toFixed(2)}</td>
+            <td><span class="status-tag status-active">Completado</span></td>
+        </tr>
+    `).join('');
+}
+
+function exportReport(type) {
+    alert(`Exportando reporte en formato ${type.toUpperCase()}...`);
+    // En producción, esta función descargaría el archivo
+}
+
+// Inicializar
+document.addEventListener('DOMContentLoaded', function() {
+    generateReport();
+});
+</script>
+{% endblock %}

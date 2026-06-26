@@ -1,0 +1,404 @@
+{% extends "base.html" %}
+
+{% block title %}Gestión de Usuarios - Admin{% endblock %}
+
+{% block content %}
+<div class="admin-container">
+    <!-- Sidebar -->
+    <aside class="admin-sidebar">
+        <div class="sidebar-header">
+            <i class="fas fa-crown"></i>
+            <h2>Admin</h2>
+            <p>Panel de Control</p>
+        </div>
+        
+        <nav class="sidebar-nav">
+            <a href="{{ url_for('admin.dashboard') }}" class="nav-item">
+                <i class="fas fa-chart-pie"></i> Dashboard
+            </a>
+            <a href="{{ url_for('admin.users') }}" class="nav-item active">
+                <i class="fas fa-users"></i> Usuarios
+                <span class="badge">{{ users.total }}</span>
+            </a>
+            <a href="#" class="nav-item">
+                <i class="fas fa-store"></i> Tiendas
+            </a>
+            <a href="#" class="nav-item">
+                <i class="fas fa-box"></i> Productos
+            </a>
+            <a href="{{ url_for('admin.reports') }}" class="nav-item">
+                <i class="fas fa-file-alt"></i> Reportes
+            </a>
+            <a href="{{ url_for('auth.logout') }}" class="nav-item logout">
+                <i class="fas fa-sign-out-alt"></i> Cerrar Sesión
+            </a>
+        </nav>
+    </aside>
+    
+    <!-- Main Content -->
+    <main class="admin-content">
+        <header class="admin-header">
+            <h1>Gestión de Usuarios</h1>
+            <div class="admin-user">
+                <span>{{ current_user.full_name }}</span>
+                <span class="role-badge">Administrador</span>
+            </div>
+        </header>
+        
+        <!-- Filters -->
+        <div class="admin-filters">
+            <div class="search-box">
+                <input type="text" id="searchUser" placeholder="Buscar usuario..." onkeyup="filterUsers()">
+                <button><i class="fas fa-search"></i></button>
+            </div>
+            <select id="filterRole" onchange="filterUsers()">
+                <option value="">Todos los roles</option>
+                <option value="cliente">Clientes</option>
+                <option value="vendedor">Vendedores</option>
+                <option value="admin">Administradores</option>
+            </select>
+            <select id="filterStatus" onchange="filterUsers()">
+                <option value="">Todos los estados</option>
+                <option value="active">Activos</option>
+                <option value="inactive">Inactivos</option>
+            </select>
+        </div>
+        
+        <!-- Users Table -->
+        <div class="table-container">
+            <table class="admin-table">
+                <thead>
+                    <tr>
+                        <th>Usuario</th>
+                        <th>Email</th>
+                        <th>WhatsApp</th>
+                        <th>Rol</th>
+                        <th>Estado</th>
+                        <th>Registro</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for user in users.items %}
+                    <tr>
+                        <td>
+                            <div class="user-cell">
+                                <img src="{{ user.avatar_url or 'https://ui-avatars.com/api/?name=' + user.full_name|urlencode + '&background=10B981&color=fff' }}" 
+                                     alt="{{ user.full_name }}" class="user-avatar">
+                                <div>
+                                    <strong>{{ user.full_name }}</strong>
+                                    <small>{{ user.id[:8] }}...</small>
+                                </div>
+                            </div>
+                        </td>
+                        <td>{{ user.email }}</td>
+                        <td>{{ user.whatsapp }}</td>
+                        <td>
+                            <span class="role-tag role-{{ user.role }}">
+                                {{ user.role|capitalize }}
+                            </span>
+                        </td>
+                        <td>
+                            <span class="status-tag {% if user.is_active %}status-active{% else %}status-inactive{% endif %}">
+                                {% if user.is_active %}Activo{% else %}Inactivo{% endif %}
+                            </span>
+                        </td>
+                        <td>{{ user.created_at.strftime('%d/%m/%Y') }}</td>
+                        <td>
+                            <div class="action-buttons">
+                                <form method="POST" action="{{ url_for('admin.toggle_user', user_id=user.id) }}" style="display: inline;">
+                                    <button type="submit" class="btn-toggle" title="{% if user.is_active %}Desactivar{% else %}Activar{% endif %}">
+                                        <i class="fas {% if user.is_active %}fa-pause{% else %}fa-play{% endif %}"></i>
+                                    </button>
+                                </form>
+                                
+                                <form method="POST" action="{{ url_for('admin.change_role', user_id=user.id) }}" style="display: inline;">
+                                    <select name="role" onchange="this.form.submit()" class="role-select">
+                                        <option value="cliente" {% if user.role == 'cliente' %}selected{% endif %}>Cliente</option>
+                                        <option value="vendedor" {% if user.role == 'vendedor' %}selected{% endif %}>Vendedor</option>
+                                        <option value="admin" {% if user.role == 'admin' %}selected{% endif %}>Admin</option>
+                                    </select>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="7" class="empty-row">No hay usuarios registrados</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- Pagination -->
+        {% if users.pages > 1 %}
+        <div class="pagination">
+            {% if users.has_prev %}
+            <a href="{{ url_for('admin.users', page=users.prev_num) }}">&laquo; Anterior</a>
+            {% endif %}
+            
+            {% for page in users.iter_pages() %}
+                {% if page %}
+                    <a href="{{ url_for('admin.users', page=page) }}" class="{% if page == users.page %}active{% endif %}">
+                        {{ page }}
+                    </a>
+                {% else %}
+                    <span class="dots">...</span>
+                {% endif %}
+            {% endfor %}
+            
+            {% if users.has_next %}
+            <a href="{{ url_for('admin.users', page=users.next_num) }}">Siguiente &raquo;</a>
+            {% endif %}
+        </div>
+        {% endif %}
+    </main>
+</div>
+
+<style>
+/* Admin Filters */
+.admin-filters {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.admin-filters .search-box {
+    flex: 1;
+    min-width: 200px;
+    display: flex;
+    background: white;
+    border: 1px solid #E2E8F0;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.admin-filters .search-box input {
+    flex: 1;
+    padding: 10px 16px;
+    border: none;
+    outline: none;
+}
+
+.admin-filters .search-box button {
+    padding: 10px 16px;
+    background: #10B981;
+    color: white;
+    border: none;
+    cursor: pointer;
+}
+
+.admin-filters select {
+    padding: 10px 16px;
+    border: 1px solid #E2E8F0;
+    border-radius: 8px;
+    background: white;
+    outline: none;
+}
+
+/* Table */
+.table-container {
+    background: white;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    overflow-x: auto;
+}
+
+.admin-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.admin-table th {
+    padding: 14px 16px;
+    text-align: left;
+    background: #F8FAFC;
+    font-weight: 600;
+    font-size: 0.85rem;
+    color: #64748B;
+    border-bottom: 2px solid #E2E8F0;
+}
+
+.admin-table td {
+    padding: 12px 16px;
+    border-bottom: 1px solid #F1F5F9;
+    vertical-align: middle;
+}
+
+.admin-table tr:hover td {
+    background: #F8FAFC;
+}
+
+.user-cell {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.user-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.user-cell small {
+    display: block;
+    color: #94A3B8;
+    font-size: 0.7rem;
+}
+
+.role-tag {
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.role-cliente {
+    background: #DBEAFE;
+    color: #1E40AF;
+}
+
+.role-vendedor {
+    background: #D1FAE5;
+    color: #065F46;
+}
+
+.role-admin {
+    background: #FEF3C7;
+    color: #92400E;
+}
+
+.status-tag {
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.status-active {
+    background: #D1FAE5;
+    color: #065F46;
+}
+
+.status-inactive {
+    background: #FEE2E2;
+    color: #991B1B;
+}
+
+.action-buttons {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.btn-toggle {
+    padding: 6px 12px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    background: #E2E8F0;
+    color: #64748B;
+    transition: all 0.3s;
+}
+
+.btn-toggle:hover {
+    background: #CBD5E1;
+}
+
+.role-select {
+    padding: 6px 8px;
+    border: 1px solid #E2E8F0;
+    border-radius: 6px;
+    background: white;
+    cursor: pointer;
+    font-size: 0.85rem;
+}
+
+.empty-row {
+    text-align: center;
+    color: #94A3B8;
+    padding: 40px !important;
+}
+
+/* Pagination */
+.pagination {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 24px;
+    flex-wrap: wrap;
+}
+
+.pagination a, .pagination .dots {
+    padding: 8px 16px;
+    border-radius: 8px;
+    text-decoration: none;
+    color: #64748B;
+    transition: all 0.3s;
+}
+
+.pagination a:hover {
+    background: #F1F5F9;
+}
+
+.pagination a.active {
+    background: #10B981;
+    color: white;
+}
+
+.pagination .dots {
+    color: #94A3B8;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .admin-filters {
+        flex-direction: column;
+    }
+    
+    .admin-filters .search-box {
+        width: 100%;
+    }
+    
+    .admin-filters select {
+        width: 100%;
+    }
+    
+    .admin-table th,
+    .admin-table td {
+        padding: 8px 10px;
+        font-size: 0.85rem;
+    }
+}
+</style>
+
+<script>
+function filterUsers() {
+    const search = document.getElementById('searchUser').value.toLowerCase();
+    const role = document.getElementById('filterRole').value;
+    const status = document.getElementById('filterStatus').value;
+    const rows = document.querySelectorAll('.admin-table tbody tr');
+    
+    rows.forEach(row => {
+        const text = row.textContent.toLowerCase();
+        const userRole = row.querySelector('.role-tag')?.textContent.toLowerCase() || '';
+        const userStatus = row.querySelector('.status-tag')?.textContent.toLowerCase() || '';
+        
+        let show = true;
+        
+        if (search && !text.includes(search)) show = false;
+        if (role && !userRole.includes(role)) show = false;
+        if (status === 'active' && userStatus !== 'activo') show = false;
+        if (status === 'inactive' && userStatus !== 'inactivo') show = false;
+        
+        row.style.display = show ? '' : 'none';
+    });
+}
+</script>
+{% endblock %}

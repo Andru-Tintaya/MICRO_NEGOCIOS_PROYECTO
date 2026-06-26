@@ -1,0 +1,256 @@
+{% extends "base.html" %}
+
+{% block title %}{{ product.name }} - MiZona{% endblock %}
+
+{% block content %}
+<div class="product-detail">
+    <div class="container">
+        <div class="product-detail-grid">
+            <!-- Imágenes -->
+            <div class="product-gallery" data-aos="fade-right">
+                <div class="main-image">
+                    <img src="{{ product.image_url or 'https://via.placeholder.com/600x600?text=Sin+Imagen' }}" 
+                         alt="{{ product.name }}" id="mainImage">
+                </div>
+                {% if product.images and product.images|length > 0 %}
+                <div class="thumbnail-grid">
+                    {% for img in product.images %}
+                    <img src="{{ img }}" alt="{{ product.name }}" onclick="changeImage(this.src)">
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+            
+            <!-- Información -->
+            <div class="product-detail-info" data-aos="fade-left">
+                <div class="product-breadcrumb">
+                    <a href="{{ url_for('index') }}">Inicio</a> &gt;
+                    <a href="{{ url_for('store.view', slug=product.store.slug) }}">{{ product.store.name }}</a> &gt;
+                    <span>{{ product.name }}</span>
+                </div>
+                
+                <h1>{{ product.name }}</h1>
+                
+                <div class="product-rating-large">
+                    <div class="stars">
+                        {% for i in range(5) %}
+                        <i class="fas fa-star {% if i < product.rating_avg|round %}active{% endif %}"></i>
+                        {% endfor %}
+                    </div>
+                    <span>{{ "%.1f"|format(product.rating_avg) if product.rating_avg else 0 }}</span>
+                    <span>({{ product.rating_count }} reseñas)</span>
+                </div>
+                
+                <div class="product-pricing-large">
+                    {% if product.discount_price %}
+                    <span class="price original">Bs {{ "%.2f"|format(product.price) }}</span>
+                    <span class="price discounted">Bs {{ "%.2f"|format(product.discount_price) }}</span>
+                    <span class="discount-tag">Ahorra {{ product.get_discount_percentage() }}%</span>
+                    {% else %}
+                    <span class="price">Bs {{ "%.2f"|format(product.price) }}</span>
+                    {% endif %}
+                </div>
+                
+                <div class="product-stock-info">
+                    {% if product.is_in_stock() %}
+                    <span class="in-stock"><i class="fas fa-check-circle"></i> En stock</span>
+                    <span>{{ product.stock }} unidades disponibles</span>
+                    {% else %}
+                    <span class="out-of-stock"><i class="fas fa-times-circle"></i> Agotado</span>
+                    {% endif %}
+                </div>
+                
+                <div class="product-description">
+                    <h3>Descripción</h3>
+                    <p>{{ product.description or 'Sin descripción' }}</p>
+                </div>
+                
+                <div class="product-meta-info">
+                    <div><strong>Vendedor:</strong> {{ product.store.name }}</div>
+                    <div><strong>Categoría:</strong> {{ product.category.name if product.category else 'Sin categoría' }}</div>
+                    <div><strong>Vendidos:</strong> {{ product.sold_count }}</div>
+                </div>
+                
+                {% if product.is_in_stock() %}
+                <div class="product-actions">
+                    <div class="quantity-selector">
+                        <button onclick="changeQuantity(-1)">-</button>
+                        <input type="number" id="quantity" value="1" min="1" max="{{ product.stock }}">
+                        <button onclick="changeQuantity(1)">+</button>
+                    </div>
+                    <button class="btn-primary btn-large" onclick="addToCartFromDetail()">
+                        <i class="fas fa-shopping-cart"></i> Agregar al Carrito
+                    </button>
+                </div>
+                {% endif %}
+                
+                <!-- Botón WhatsApp directo -->
+                <a href="https://wa.me/{{ product.store.whatsapp.replace('+', '') }}?text=Hola%2C%20me%20interesa%20{{ product.name|urlencode }}" 
+                   class="btn-whatsapp-direct" target="_blank">
+                    <i class="fab fa-whatsapp"></i> Contactar por WhatsApp
+                </a>
+            </div>
+        </div>
+        
+        <!-- Reseñas -->
+        <section class="reviews-section" data-aos="fade-up">
+            <h2>Reseñas de Clientes</h2>
+            <div id="reviewsList">
+                <!-- Cargado vía AJAX -->
+            </div>
+            
+            {% if current_user.is_authenticated %}
+            <div class="review-form">
+                <h3>Deja tu reseña</h3>
+                <form id="reviewForm">
+                    <input type="hidden" name="product_id" value="{{ product.id }}">
+                    <div class="rating-selector">
+                        <label>Calificación:</label>
+                        <div class="stars-input">
+                            <input type="radio" name="rating" value="5" id="star5"><label for="star5">★</label>
+                            <input type="radio" name="rating" value="4" id="star4"><label for="star4">★</label>
+                            <input type="radio" name="rating" value="3" id="star3"><label for="star3">★</label>
+                            <input type="radio" name="rating" value="2" id="star2"><label for="star2">★</label>
+                            <input type="radio" name="rating" value="1" id="star1"><label for="star1">★</label>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <textarea name="comment" placeholder="Escribe tu comentario..." rows="3"></textarea>
+                    </div>
+                    <button type="submit" class="btn-primary">
+                        <i class="fas fa-paper-plane"></i> Publicar Reseña
+                    </button>
+                </form>
+            </div>
+            {% endif %}
+        </section>
+        
+        <!-- Productos relacionados -->
+        {% if related_products %}
+        <section class="section" data-aos="fade-up">
+            <h2 class="section-title">Productos Relacionados</h2>
+            <div class="products-grid">
+                {% for related in related_products %}
+                <div class="product-card">
+                    <a href="{{ url_for('product.detail', slug=related.slug) }}">
+                        <div class="product-image">
+                            <img src="{{ related.image_url or 'https://via.placeholder.com/300x300?text=Sin+Imagen' }}" 
+                                 alt="{{ related.name }}" loading="lazy">
+                        </div>
+                        <div class="product-info">
+                            <h3>{{ related.name }}</h3>
+                            <div class="product-pricing">
+                                <span class="price">Bs {{ "%.2f"|format(related.price) }}</span>
+                            </div>
+                        </div>
+                    </a>
+                </div>
+                {% endfor %}
+            </div>
+        </section>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Cambiar imagen principal
+function changeImage(src) {
+    document.getElementById('mainImage').src = src;
+}
+
+// Cambiar cantidad
+function changeQuantity(delta) {
+    const input = document.getElementById('quantity');
+    let value = parseInt(input.value) + delta;
+    const max = parseInt(input.max);
+    if (value < 1) value = 1;
+    if (value > max) value = max;
+    input.value = value;
+}
+
+// Agregar al carrito desde el detalle
+function addToCartFromDetail() {
+    const quantity = parseInt(document.getElementById('quantity').value);
+    const productId = '{{ product.id }}';
+    const name = '{{ product.name }}';
+    const price = {{ product.get_price_with_discount() }};
+    
+    for (let i = 0; i < quantity; i++) {
+        addToCart(productId, name, price);
+    }
+}
+
+// Cargar reseñas
+function loadReviews() {
+    const productId = '{{ product.id }}';
+    fetch(`/api/reviews/${productId}`)
+        .then(res => res.json())
+        .then(data => {
+            const container = document.getElementById('reviewsList');
+            if (data.success && data.data.length > 0) {
+                container.innerHTML = data.data.map(review => `
+                    <div class="review-item">
+                        <div class="review-header">
+                            <div class="review-user">
+                                <strong>${review.user?.full_name || 'Usuario'}</strong>
+                                <span class="review-date">${new Date(review.created_at).toLocaleDateString()}</span>
+                            </div>
+                            <div class="review-rating">
+                                ${'★'.repeat(review.rating)}${'☆'.repeat(5 - review.rating)}
+                            </div>
+                        </div>
+                        <p>${review.comment || ''}</p>
+                    </div>
+                `).join('');
+            } else {
+                container.innerHTML = '<p style="color: var(--text-muted);">Sin reseñas aún. ¡Sé el primero en calificar!</p>';
+            }
+        });
+}
+
+// Enviar reseña
+document.getElementById('reviewForm')?.addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(this);
+    const data = {
+        product_id: formData.get('product_id'),
+        rating: formData.get('rating'),
+        comment: formData.get('comment')
+    };
+    
+    if (!data.rating) {
+        alert('Selecciona una calificación');
+        return;
+    }
+    
+    fetch('/api/reviews', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data)
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            alert('✅ Reseña publicada con éxito');
+            loadReviews();
+            this.reset();
+        } else {
+            alert('❌ Error: ' + data.error);
+        }
+    })
+    .catch(error => {
+        alert('❌ Error al publicar reseña');
+    });
+});
+
+// Inicializar
+document.addEventListener('DOMContentLoaded', function() {
+    loadReviews();
+});
+</script>
+{% endblock %}

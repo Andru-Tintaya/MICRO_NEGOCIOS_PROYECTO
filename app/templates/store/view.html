@@ -1,0 +1,298 @@
+{% extends "base.html" %}
+
+{% block title %}{{ store.name }} - MiZona{% endblock %}
+
+{% block content %}
+<!-- Store Header -->
+<div class="store-header" style="background: linear-gradient(135deg, #ECFDF5, #D1FAE5); padding: 60px 0 40px;">
+    <div class="container">
+        <div class="store-profile">
+            <div class="store-avatar">
+                {% if store.logo_url %}
+                <img src="{{ store.logo_url }}" alt="{{ store.name }}">
+                {% else %}
+                <i class="fas fa-store"></i>
+                {% endif %}
+            </div>
+            <div class="store-info">
+                <h1>{{ store.name }}</h1>
+                <p>{{ store.description or 'Negocio local verificado' }}</p>
+                <div class="store-meta">
+                    <span><i class="fas fa-map-marker-alt"></i> {{ store.city }}</span>
+                    <span><i class="fas fa-star" style="color: #F59E0B;"></i> {{ "%.1f"|format(store.rating_avg) if store.rating_avg else 0 }}</span>
+                    <span><i class="fas fa-users"></i> {{ store.followers_count }} seguidores</span>
+                    <a href="https://wa.me/{{ store.whatsapp.replace('+', '') }}" class="whatsapp-link" target="_blank">
+                        <i class="fab fa-whatsapp"></i> {{ store.whatsapp }}
+                    </a>
+                </div>
+                
+                <!-- Botones de acción -->
+                <div class="store-actions">
+                    {% if current_user.is_authenticated and current_user.id != store.user_id %}
+                    <button onclick="toggleFollow()" id="followBtn" class="btn-follow">
+                        <i class="fas fa-user-plus"></i> <span id="followText">Seguir</span>
+                    </button>
+                    {% endif %}
+                    
+                    {% if current_user.is_authenticated and current_user.id == store.user_id %}
+                    <a href="{{ url_for('store.dashboard') }}" class="btn-primary">
+                        <i class="fas fa-cog"></i> Gestionar Tienda
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Products Section -->
+<section class="section">
+    <div class="container">
+        <h2 class="section-title">Productos Disponibles</h2>
+        
+        <!-- Filtros -->
+        <div class="filters">
+            <div class="search-box">
+                <input type="text" id="searchProduct" placeholder="Buscar productos...">
+                <button onclick="filterProducts()"><i class="fas fa-search"></i></button>
+            </div>
+            <select id="sortProducts" onchange="filterProducts()">
+                <option value="created_at">Más Recientes</option>
+                <option value="price_asc">Menor Precio</option>
+                <option value="price_desc">Mayor Precio</option>
+                <option value="rating">Mejor Calificación</option>
+            </select>
+        </div>
+        
+        <div class="products-grid" id="productsGrid">
+            {% for product in products %}
+            <div class="product-card" data-price="{{ product.price }}" data-rating="{{ product.rating_avg }}" data-created="{{ product.created_at }}">
+                <a href="{{ url_for('product.detail', slug=product.slug) }}">
+                    <div class="product-image">
+                        <img src="{{ product.image_url or 'https://via.placeholder.com/300x300?text=Sin+Imagen' }}" 
+                             alt="{{ product.name }}" loading="lazy">
+                        {% if product.discount_price %}
+                        <span class="discount-badge">-{{ product.get_discount_percentage() }}%</span>
+                        {% endif %}
+                        {% if not product.is_in_stock() %}
+                        <span class="out-of-stock">Agotado</span>
+                        {% endif %}
+                    </div>
+                    <div class="product-info">
+                        <h3>{{ product.name }}</h3>
+                        <div class="product-rating">
+                            <i class="fas fa-star"></i>
+                            <span>{{ "%.1f"|format(product.rating_avg) if product.rating_avg else 0 }}</span>
+                            <span>({{ product.rating_count }})</span>
+                        </div>
+                        <div class="product-pricing">
+                            {% if product.discount_price %}
+                            <span class="price original">Bs {{ "%.2f"|format(product.price) }}</span>
+                            <span class="price discounted">Bs {{ "%.2f"|format(product.discount_price) }}</span>
+                            {% else %}
+                            <span class="price">Bs {{ "%.2f"|format(product.price) }}</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </a>
+                
+                {% if product.is_in_stock() %}
+                <button class="btn-add-cart" onclick="addToCart('{{ product.id }}', '{{ product.name }}', {{ product.get_price_with_discount() }})">
+                    <i class="fas fa-shopping-cart"></i> Agregar
+                </button>
+                {% endif %}
+            </div>
+            {% else %}
+            <div class="empty-state" style="grid-column: 1/-1;">
+                <i class="fas fa-box-open"></i>
+                <h3>No hay productos disponibles</h3>
+                <p>Esta tienda aún no tiene productos publicados</p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+
+<!-- Cart Section -->
+<div class="cart-floating" id="cartFloating">
+    <button class="cart-toggle" onclick="toggleCart()">
+        <i class="fas fa-shopping-cart"></i>
+        <span class="cart-count" id="cartCount">0</span>
+    </button>
+    <div class="cart-panel" id="cartPanel">
+        <h3>🛒 Tu Pedido</h3>
+        <div id="cartItems"></div>
+        <div class="cart-total">
+            <strong>Total: <span id="cartTotal">Bs 0.00</span></strong>
+        </div>
+        <button class="btn-whatsapp" onclick="sendWhatsApp()">
+            <i class="fab fa-whatsapp"></i> Enviar Pedido
+        </button>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// ============================================
+// CARRITO
+// ============================================
+let cart = JSON.parse(localStorage.getItem('cart_' + '{{ store.id }}')) || [];
+
+function addToCart(productId, name, price) {
+    const existing = cart.find(item => item.id === productId);
+    if (existing) {
+        existing.quantity += 1;
+    } else {
+        cart.push({ id: productId, name, price, quantity: 1 });
+    }
+    localStorage.setItem('cart_' + '{{ store.id }}', JSON.stringify(cart));
+    updateCart();
+    showNotification('Producto agregado al carrito ✅');
+}
+
+function updateCart() {
+    const count = cart.reduce((sum, item) => sum + item.quantity, 0);
+    document.getElementById('cartCount').textContent = count;
+    
+    const cartItems = document.getElementById('cartItems');
+    const cartTotal = document.getElementById('cartTotal');
+    
+    if (cart.length === 0) {
+        cartItems.innerHTML = '<p style="color: var(--text-muted);">El carrito está vacío</p>';
+        cartTotal.textContent = 'Bs 0.00';
+        return;
+    }
+    
+    cartItems.innerHTML = cart.map(item => `
+        <div class="cart-item">
+            <span>${item.name} <strong>x${item.quantity}</strong></span>
+            <span>Bs ${(item.price * item.quantity).toFixed(2)}</span>
+            <button onclick="removeFromCart('${item.id}')" class="remove-item">&times;</button>
+        </div>
+    `).join('');
+    
+    const total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    cartTotal.textContent = `Bs ${total.toFixed(2)}`;
+}
+
+function removeFromCart(productId) {
+    cart = cart.filter(item => item.id !== productId);
+    localStorage.setItem('cart_' + '{{ store.id }}', JSON.stringify(cart));
+    updateCart();
+}
+
+function toggleCart() {
+    const panel = document.getElementById('cartPanel');
+    panel.classList.toggle('show');
+}
+
+function sendWhatsApp() {
+    if (cart.length === 0) {
+        alert('El carrito está vacío');
+        return;
+    }
+    
+    const storeId = '{{ store.id }}';
+    const products = cart.map(item => item.id);
+    const quantities = cart.map(item => item.quantity);
+    const total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    
+    const params = new URLSearchParams({
+        'products[]': products,
+        'quantities[]': quantities,
+        total: total
+    });
+    
+    window.location.href = `/whatsapp-order/${storeId}?${params}`;
+}
+
+// ============================================
+// SEGUIR TIENDA
+// ============================================
+function toggleFollow() {
+    const storeId = '{{ store.id }}';
+    fetch('/api/followers', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ store_id: storeId })
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            const btn = document.getElementById('followBtn');
+            const text = document.getElementById('followText');
+            
+            if (data.action === 'followed') {
+                text.textContent = 'Siguiendo';
+                btn.classList.add('following');
+            } else {
+                text.textContent = 'Seguir';
+                btn.classList.remove('following');
+            }
+        }
+    });
+}
+
+// ============================================
+// FILTROS DE PRODUCTOS
+// ============================================
+function filterProducts() {
+    const search = document.getElementById('searchProduct').value.toLowerCase();
+    const sort = document.getElementById('sortProducts').value;
+    const grid = document.getElementById('productsGrid');
+    const cards = Array.from(grid.querySelectorAll('.product-card'));
+    
+    // Filtrar
+    cards.forEach(card => {
+        const name = card.querySelector('h3').textContent.toLowerCase();
+        card.style.display = name.includes(search) ? '' : 'none';
+    });
+    
+    // Ordenar
+    const visibleCards = cards.filter(card => card.style.display !== 'none');
+    visibleCards.sort((a, b) => {
+        if (sort === 'price_asc') {
+            return parseFloat(a.dataset.price) - parseFloat(b.dataset.price);
+        } else if (sort === 'price_desc') {
+            return parseFloat(b.dataset.price) - parseFloat(a.dataset.price);
+        } else if (sort === 'rating') {
+            return parseFloat(b.dataset.rating) - parseFloat(a.dataset.rating);
+        } else {
+            return new Date(b.dataset.created) - new Date(a.dataset.created);
+        }
+    });
+    
+    // Reordenar
+    visibleCards.forEach(card => grid.appendChild(card));
+}
+
+// ============================================
+// NOTIFICACIONES
+// ============================================
+function showNotification(message) {
+    const div = document.createElement('div');
+    div.className = 'flash-message flash-success';
+    div.textContent = message;
+    div.style.position = 'fixed';
+    div.style.bottom = '20px';
+    div.style.right = '20px';
+    div.style.zIndex = '9999';
+    div.style.maxWidth = '300px';
+    document.body.appendChild(div);
+    
+    setTimeout(() => {
+        div.remove();
+    }, 3000);
+}
+
+// ============================================
+// INICIALIZAR
+// ============================================
+document.addEventListener('DOMContentLoaded', function() {
+    updateCart();
+});
+</script>
+{% endblock %}

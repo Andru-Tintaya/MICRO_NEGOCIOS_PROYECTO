@@ -1,0 +1,194 @@
+{% extends "base.html" %}
+
+{% block title %}Productos - MiZona{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="products-header">
+        <h1>🛒 Todos los Productos</h1>
+        <div class="products-tools">
+            <div class="search-box">
+                <input type="text" id="searchInput" placeholder="Buscar productos..." oninput="filterProducts()">
+                <button><i class="fas fa-search"></i></button>
+            </div>
+            <select id="sortSelect" onchange="filterProducts()">
+                <option value="newest">Más Recientes</option>
+                <option value="price_low">Precio: Menor a Mayor</option>
+                <option value="price_high">Precio: Mayor a Menor</option>
+                <option value="rating">Mejor Calificación</option>
+                <option value="popular">Más Populares</option>
+            </select>
+        </div>
+    </div>
+    
+    <div class="products-grid" id="productsGrid">
+        {% for product in products %}
+        <div class="product-card" 
+             data-price="{{ product.price }}"
+             data-rating="{{ product.rating_avg }}"
+             data-created="{{ product.created_at }}"
+             data-sold="{{ product.sold_count }}">
+            <a href="{{ url_for('product.detail', slug=product.slug) }}">
+                <div class="product-image">
+                    <img src="{{ product.image_url or 'https://via.placeholder.com/300x300?text=Sin+Imagen' }}" 
+                         alt="{{ product.name }}" loading="lazy">
+                    {% if product.discount_price %}
+                    <span class="discount-badge">-{{ product.get_discount_percentage() }}%</span>
+                    {% endif %}
+                    {% if not product.is_in_stock() %}
+                    <span class="out-of-stock">Agotado</span>
+                    {% endif %}
+                </div>
+                <div class="product-info">
+                    <h3>{{ product.name }}</h3>
+                    <div class="product-meta">
+                        <span class="product-store">{{ product.store.name }}</span>
+                        <div class="product-rating">
+                            <i class="fas fa-star"></i>
+                            <span>{{ "%.1f"|format(product.rating_avg) if product.rating_avg else 0 }}</span>
+                            <span>({{ product.rating_count }})</span>
+                        </div>
+                    </div>
+                    <div class="product-pricing">
+                        {% if product.discount_price %}
+                        <span class="price original">Bs {{ "%.2f"|format(product.price) }}</span>
+                        <span class="price discounted">Bs {{ "%.2f"|format(product.discount_price) }}</span>
+                        {% else %}
+                        <span class="price">Bs {{ "%.2f"|format(product.price) }}</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </a>
+            {% if product.is_in_stock() %}
+            <button class="btn-add-cart" onclick="addToCart('{{ product.id }}', '{{ product.name }}', {{ product.get_price_with_discount() }})">
+                <i class="fas fa-shopping-cart"></i> Agregar
+            </button>
+            {% endif %}
+        </div>
+        {% else %}
+        <div class="empty-state" style="grid-column: 1/-1;">
+            <i class="fas fa-box-open"></i>
+            <h3>No hay productos disponibles</h3>
+            <p>Pronto habrá nuevos productos</p>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<style>
+.products-header {
+    margin: 30px 0;
+}
+
+.products-header h1 {
+    font-size: 2rem;
+    font-weight: 800;
+    margin-bottom: 16px;
+}
+
+.products-tools {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.products-tools .search-box {
+    flex: 1;
+    min-width: 200px;
+    display: flex;
+    background: white;
+    border: 1px solid #E2E8F0;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.products-tools .search-box input {
+    flex: 1;
+    padding: 10px 16px;
+    border: none;
+    outline: none;
+}
+
+.products-tools .search-box button {
+    padding: 10px 16px;
+    background: #10B981;
+    color: white;
+    border: none;
+    cursor: pointer;
+}
+
+.products-tools select {
+    padding: 10px 16px;
+    border: 1px solid #E2E8F0;
+    border-radius: 8px;
+    background: white;
+    outline: none;
+}
+
+.out-of-stock {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(0,0,0,0.7);
+    color: white;
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-weight: 700;
+}
+
+.btn-add-cart {
+    width: 100%;
+    padding: 10px;
+    background: #10B981;
+    color: white;
+    border: none;
+    border-radius: 0 0 12px 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.3s;
+}
+
+.btn-add-cart:hover {
+    background: #059669;
+}
+</style>
+
+<script>
+function filterProducts() {
+    const search = document.getElementById('searchInput').value.toLowerCase();
+    const sort = document.getElementById('sortSelect').value;
+    const grid = document.getElementById('productsGrid');
+    const cards = Array.from(grid.querySelectorAll('.product-card'));
+    
+    // Filtrar
+    cards.forEach(card => {
+        const text = card.textContent.toLowerCase();
+        card.style.display = text.includes(search) ? '' : 'none';
+    });
+    
+    // Ordenar
+    const visible = cards.filter(c => c.style.display !== 'none');
+    visible.sort((a, b) => {
+        if (sort === 'price_low') {
+            return parseFloat(a.dataset.price) - parseFloat(b.dataset.price);
+        } else if (sort === 'price_high') {
+            return parseFloat(b.dataset.price) - parseFloat(a.dataset.price);
+        } else if (sort === 'rating') {
+            return parseFloat(b.dataset.rating) - parseFloat(a.dataset.rating);
+        } else if (sort === 'popular') {
+            return parseInt(b.dataset.sold) - parseInt(a.dataset.sold);
+        } else {
+            return new Date(b.dataset.created) - new Date(a.dataset.created);
+        }
+    });
+    
+    visible.forEach(card => grid.appendChild(card));
+}
+
+function addToCart(productId, name, price) {
+    alert(`🛒 ${name} agregado al carrito (Bs ${price.toFixed(2)})`);
+}
+</script>
+{% endblock %}

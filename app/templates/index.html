@@ -1,0 +1,173 @@
+{% extends "base.html" %}
+
+{% block title %}MiZona - Encuentra productos locales{% endblock %}
+
+{% block content %}
+<!-- Hero Section con animación -->
+<section class="hero" data-aos="fade-up">
+    <div class="hero-background">
+        <div class="particles" id="particles"></div>
+    </div>
+    <div class="container hero-content">
+        <h1 data-aos="fade-right">
+            Encuentra el <span class="highlight">mejor talento</span> de tu ciudad
+        </h1>
+        <p data-aos="fade-right" data-aos-delay="200">
+            Conectamos emprendedores locales con clientes que valoran calidad y confianza.
+            <span class="typing-text" id="typingText"></span>
+        </p>
+        
+        <div class="search-box" data-aos="fade-up" data-aos-delay="400">
+            <input type="text" id="searchInput" placeholder="Busca productos, categorías o tiendas...">
+            <button onclick="searchStores()">
+                <i class="fas fa-search"></i> Buscar
+            </button>
+        </div>
+        
+        <div class="hero-stats" data-aos="fade-up" data-aos-delay="600">
+            <div class="stat-item">
+                <span class="stat-number" id="storeCount">{{ stores|length }}</span>
+                <span class="stat-label">Negocios activos</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-number">{{ categories|length }}</span>
+                <span class="stat-label">Categorías</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-number">100%</span>
+                <span class="stat-label">Sin comisiones</span>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Categorías Populares -->
+<section class="section categories-section" data-aos="fade-up">
+    <div class="container">
+        <h2 class="section-title">Explora por Categorías</h2>
+        <div class="categories-grid">
+            {% for category in categories %}
+            <a href="{{ url_for('product.list') }}?category={{ category.id }}" class="category-card">
+                <div class="category-icon">
+                    <i class="fas fa-{{ category.icon or 'tag' }}"></i>
+                </div>
+                <h3>{{ category.name }}</h3>
+                <span>{{ category.products|length }} productos</span>
+            </a>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+
+<!-- Productos Destacados -->
+<section class="section featured-section" style="background: var(--bg-light);" data-aos="fade-up">
+    <div class="container">
+        <div class="section-header">
+            <h2 class="section-title">Productos Destacados</h2>
+            <a href="{{ url_for('product.list') }}" class="view-all">Ver todos <i class="fas fa-arrow-right"></i></a>
+        </div>
+        <div class="products-grid">
+            {% for product in featured_products %}
+            <div class="product-card" data-aos="fade-up" data-aos-delay="{{ loop.index * 100 }}">
+                <div class="product-image">
+                    <img src="{{ product.image_url or 'https://via.placeholder.com/300x300?text=Sin+Imagen' }}" 
+                         alt="{{ product.name }}" loading="lazy">
+                    {% if product.discount_price %}
+                    <span class="discount-badge">-{{ ((1 - product.discount_price/product.price) * 100)|round }}%</span>
+                    {% endif %}
+                    {% if product.is_featured %}
+                    <span class="featured-badge">Destacado</span>
+                    {% endif %}
+                </div>
+                <div class="product-info">
+                    <h3>{{ product.name }}</h3>
+                    <div class="product-meta">
+                        <span class="product-store">{{ product.store.name }}</span>
+                        <div class="product-rating">
+                            <i class="fas fa-star"></i>
+                            <span>{{ product.rating_avg|round(1) }}</span>
+                            <span>({{ product.rating_count }})</span>
+                        </div>
+                    </div>
+                    <div class="product-pricing">
+                        {% if product.discount_price %}
+                        <span class="price original">Bs {{ "%.2f"|format(product.price) }}</span>
+                        <span class="price discounted">Bs {{ "%.2f"|format(product.discount_price) }}</span>
+                        {% else %}
+                        <span class="price">Bs {{ "%.2f"|format(product.price) }}</span>
+                        {% endif %}
+                    </div>
+                    <a href="{{ url_for('product.detail', slug=product.slug) }}" class="btn-view-product">
+                        Ver Producto <i class="fas fa-arrow-right"></i>
+                    </a>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+
+<!-- Cómo funciona -->
+<section class="section how-it-works" data-aos="fade-up">
+    <div class="container">
+        <h2 class="section-title">¿Cómo funciona MiZona?</h2>
+        <div class="steps-grid">
+            <div class="step" data-aos="fade-up" data-aos-delay="100">
+                <div class="step-number">1</div>
+                <div class="step-icon"><i class="fas fa-user-plus"></i></div>
+                <h3>Regístrate Gratis</h3>
+                <p>Crea tu cuenta como emprendedor o cliente en menos de 5 minutos</p>
+            </div>
+            <div class="step" data-aos="fade-up" data-aos-delay="200">
+                <div class="step-number">2</div>
+                <div class="step-icon"><i class="fas fa-store"></i></div>
+                <h3>Crea tu Tienda</h3>
+                <p>Personaliza tu tienda, sube productos y define tus precios</p>
+            </div>
+            <div class="step" data-aos="fade-up" data-aos-delay="300">
+                <div class="step-number">3</div>
+                <div class="step-icon"><i class="fas fa-shopping-cart"></i></div>
+                <h3>Vende sin Comisiones</h3>
+                <p>Recibe pedidos directamente por WhatsApp y gestiona tus ventas</p>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Partículas del fondo
+document.addEventListener('DOMContentLoaded', function() {
+    // Efecto de escritura
+    const texts = ['Productos artesanales', 'Servicios locales', 'Emprendedores', 'Tu ciudad'];
+    let index = 0;
+    let charIndex = 0;
+    let isDeleting = false;
+    const typingElement = document.getElementById('typingText');
+    
+    function typeEffect() {
+        const currentText = texts[index];
+        
+        if (isDeleting) {
+            typingElement.textContent = currentText.substring(0, charIndex - 1);
+            charIndex--;
+        } else {
+            typingElement.textContent = currentText.substring(0, charIndex + 1);
+            charIndex++;
+        }
+        
+        if (!isDeleting && charIndex === currentText.length) {
+            setTimeout(() => isDeleting = true, 2000);
+        } else if (isDeleting && charIndex === 0) {
+            isDeleting = false;
+            index = (index + 1) % texts.length;
+        }
+        
+        setTimeout(typeEffect, isDeleting ? 50 : 100);
+    }
+    
+    typeEffect();
+});
+</script>
+{% endblock %}

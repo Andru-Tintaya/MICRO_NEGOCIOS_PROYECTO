@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+
+{% block title %}Registrarse - Micro Negocios{% endblock %}
+
+{% block content %}
+<div class="auth-container fade-in">
+    <div class="auth-logo">
+        <i class="fas fa-user-plus"></i>
+    </div>
+    <h2>Crear Cuenta</h2>
+    <p class="subtitle">Únete a nuestra comunidad de negocios</p>
+    
+    <form method="POST" action="{{ url_for('auth.register') }}">
+        {{ form.csrf_token() }}
+        
+        <div class="form-group">
+            <label for="full_name"><i class="fas fa-user"></i> Nombre Completo</label>
+            {{ form.full_name(class="form-control", placeholder="Juan Pérez") }}
+        </div>
+        
+        <div class="form-group">
+            <label for="email"><i class="fas fa-envelope"></i> Email</label>
+            {{ form.email(class="form-control", placeholder="ejemplo@email.com") }}
+        </div>
+        
+        <div class="form-group">
+            <label for="whatsapp"><i class="fab fa-whatsapp"></i> WhatsApp</label>
+            {{ form.whatsapp(class="form-control", placeholder="+59170000000") }}
+        </div>
+        
+        <div class="form-group">
+            <label for="password"><i class="fas fa-lock"></i> Contraseña</label>
+            {{ form.password(class="form-control", placeholder="•••••••• (mínimo 8 caracteres)") }}
+        </div>
+        
+        <div class="form-group">
+            <label for="confirm_password"><i class="fas fa-check-circle"></i> Confirmar Contraseña</label>
+            {{ form.confirm_password(class="form-control", placeholder="••••••••") }}
+        </div>
+        
+        <div class="form-group">
+            <label for="role"><i class="fas fa-user-tag"></i> Tipo de Cuenta</label>
+            {{ form.role(class="form-control") }}
+        </div>
+        
+        <button type="submit" class="btn btn-primary btn-block">
+            <i class="fas fa-user-plus"></i> Registrarse
+        </button>
+    </form>
+    
+    <p class="text-center mt-3" style="color: var(--text-secondary);">
+        ¿Ya tienes cuenta? 
+        <a href="{{ url_for('auth.login') }}" style="color: var(--primary); text-decoration: none; font-weight: 600;">
+            Inicia Sesión
+        </a>
+    </p>
+</div>
+{% endblock %}
