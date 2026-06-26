@@ -22,16 +22,16 @@
                 
                 <div class="navbar-dropdown">
                     <button class="dropdown-toggle">
-                        <img src="{{ current_user.avatar_url or 'https://ui-avatars.com/api/?name=' + current_user.full_name|urlencode + '&background=10B981&color=fff' }}" 
+                        <img src="{{ current_user.avatar_url or 'https://ui-avatars.com/api/?name=' + current_user.full_name|urlencode + '&background=10B981&color=fff&size=32' }}" 
                              alt="{{ current_user.full_name }}" class="avatar">
                         <span>{{ current_user.full_name }}</span>
                         <i class="fas fa-chevron-down"></i>
                     </button>
                     <div class="dropdown-menu">
                         <a href="#"><i class="fas fa-user"></i> Perfil</a>
-                        <a href="#"><i class="fas fa-heart"></i> Favoritos</a>
-                        <a href="#"><i class="fas fa-shopping-bag"></i> Mis Pedidos</a>
-                        <a href="#"><i class="fas fa-bell"></i> Notificaciones</a>
+                        <a href="{{ url_for('favorite.list') }}"><i class="fas fa-heart"></i> Favoritos</a>
+                        <a href="{{ url_for('order.list') }}"><i class="fas fa-shopping-bag"></i> Mis Pedidos</a>
+                        <a href="{{ url_for('notification.list') }}"><i class="fas fa-bell"></i> Notificaciones</a>
                         <hr>
                         <a href="{{ url_for('auth.logout') }}" class="logout-link">
                             <i class="fas fa-sign-out-alt"></i> Cerrar Sesión
@@ -50,9 +50,281 @@
     </div>
 </nav>
 
+<style>
+/* ========================================
+   NAVBAR ESTILOS (ARMONIZADO)
+   ======================================== */
+.navbar {
+    background: var(--bg-white);
+    border-bottom: 1px solid var(--border);
+    padding: 12px 0;
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+    backdrop-filter: blur(10px);
+    background: rgba(255, 255, 255, 0.95);
+}
+
+.navbar .container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.navbar-brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: var(--primary);
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.navbar-brand:hover {
+    transform: scale(1.02);
+}
+
+.navbar-brand i {
+    font-size: 1.8rem;
+    color: var(--primary);
+}
+
+.navbar-links {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+.navbar-links a {
+    font-weight: 500;
+    color: var(--text-muted);
+    transition: var(--transition);
+    padding: 8px 12px;
+    border-radius: 8px;
+    text-decoration: none;
+}
+
+.navbar-links a:hover {
+    color: var(--primary);
+    background: rgba(16, 185, 129, 0.1);
+}
+
+/* Botones de autenticación */
+.btn-login {
+    color: var(--primary) !important;
+    border: 2px solid var(--primary);
+    padding: 8px 20px !important;
+    border-radius: 50px !important;
+    font-weight: 600 !important;
+}
+
+.btn-login:hover {
+    background: var(--primary) !important;
+    color: white !important;
+}
+
+.btn-register {
+    background: var(--primary);
+    color: white !important;
+    padding: 8px 20px !important;
+    border-radius: 50px !important;
+    font-weight: 600 !important;
+}
+
+.btn-register:hover {
+    background: var(--primary-dark) !important;
+    color: white !important;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+/* Enlaces de admin y vendedor */
+.admin-link, .vendor-link {
+    font-weight: 600 !important;
+}
+
+.admin-link {
+    color: #8B5CF6 !important;
+}
+
+.admin-link:hover {
+    background: rgba(139, 92, 246, 0.1) !important;
+    color: #7C3AED !important;
+}
+
+.vendor-link {
+    color: var(--primary) !important;
+}
+
+.vendor-link:hover {
+    background: rgba(16, 185, 129, 0.1) !important;
+}
+
+/* Dropdown */
+.navbar-dropdown {
+    position: relative;
+}
+
+.dropdown-toggle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 8px 12px;
+    border-radius: 8px;
+    transition: var(--transition);
+    font-weight: 500;
+    color: var(--text);
+    font-family: inherit;
+    font-size: 1rem;
+}
+
+.dropdown-toggle:hover {
+    background: rgba(16, 185, 129, 0.1);
+}
+
+.dropdown-toggle .avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid var(--primary);
+}
+
+.dropdown-toggle span {
+    color: var(--text);
+}
+
+.dropdown-toggle i {
+    color: var(--text-muted);
+    font-size: 0.8rem;
+}
+
+.dropdown-menu {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    background: var(--bg-white);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-lg);
+    min-width: 200px;
+    padding: 8px 0;
+    display: none;
+    z-index: 100;
+}
+
+.dropdown-menu.show {
+    display: block;
+}
+
+.dropdown-menu a {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 16px;
+    color: var(--text);
+    transition: var(--transition);
+    text-decoration: none;
+    font-weight: 400;
+}
+
+.dropdown-menu a:hover {
+    background: var(--bg-light);
+    color: var(--primary);
+}
+
+.dropdown-menu hr {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 8px 0;
+}
+
+.logout-link {
+    color: #EF4444 !important;
+}
+
+.logout-link:hover {
+    background: #FEE2E2 !important;
+    color: #DC2626 !important;
+}
+
+.navbar-toggle {
+    display: none;
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: var(--text);
+    padding: 8px 12px;
+}
+
+/* ========================================
+   RESPONSIVE
+   ======================================== */
+@media (max-width: 768px) {
+    .navbar-links {
+        display: none;
+        flex-direction: column;
+        width: 100%;
+        padding: 16px 0;
+        gap: 12px;
+        background: white;
+        border-radius: var(--radius);
+        box-shadow: var(--shadow-lg);
+        margin-top: 12px;
+    }
+    
+    .navbar-links.active {
+        display: flex;
+    }
+    
+    .navbar-toggle {
+        display: block;
+    }
+    
+    .navbar-dropdown {
+        width: 100%;
+    }
+    
+    .dropdown-menu {
+        position: static;
+        box-shadow: none;
+        border: none;
+        padding-left: 20px;
+        width: 100%;
+    }
+    
+    .btn-login, .btn-register {
+        width: 100%;
+        text-align: center;
+    }
+}
+</style>
+
 <script>
 function toggleNavbar() {
     const links = document.querySelector('.navbar-links');
     links.classList.toggle('active');
 }
+
+// Cerrar dropdown al hacer clic fuera
+document.addEventListener('click', function(e) {
+    const dropdown = document.querySelector('.navbar-dropdown');
+    const menu = document.querySelector('.dropdown-menu');
+    if (dropdown && menu && !dropdown.contains(e.target)) {
+        menu.classList.remove('show');
+    }
+});
+
+// Toggle dropdown
+document.querySelector('.dropdown-toggle')?.addEventListener('click', function(e) {
+    e.stopPropagation();
+    const menu = this.nextElementSibling;
+    menu.classList.toggle('show');
+});
 </script>

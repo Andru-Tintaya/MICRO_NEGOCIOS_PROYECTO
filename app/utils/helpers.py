@@ -43,7 +43,8 @@ def save_image(file, folder='products'):
     except Exception:
         pass
     
-    return f"uploads/{folder}/{filename}"
+    # 🔥 CAMBIO IMPORTANTE: Devolver la URL completa para static
+    return f"/static/uploads/{folder}/{filename}"
 
 def delete_image(filepath):
     if not filepath:

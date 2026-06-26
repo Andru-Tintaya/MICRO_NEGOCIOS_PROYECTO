@@ -116,11 +116,23 @@ def dashboard():
     # Productos recientes
     recent_products = Product.query.filter_by(store_id=store.id).order_by(Product.created_at.desc()).limit(5).all()
     
+    # 🔥 AGREGAR: Productos con stock bajo
+    low_stock_products = Product.query.filter(
+        Product.store_id == store.id,
+        Product.stock <= Product.min_stock,
+        Product.stock > 0
+    ).all()
+    
+    # 🔥 AGREGAR: Categorías para el modal
+    categories = Category.query.all()
+    
     return render_template('store/dashboard.html', 
                          store=store, 
+                         products=recent_products,
                          total_products=total_products,
                          total_orders=total_orders,
-                         recent_products=recent_products)
+                         low_stock_products=low_stock_products,
+                         categories=categories)  # 🔥 PASAR categories
 
 # ============================================
 # RUTA: EDITAR TIENDA (REQUIERE TIENDA)

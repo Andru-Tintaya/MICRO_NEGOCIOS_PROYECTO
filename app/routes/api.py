@@ -1,6 +1,6 @@
 from flask import Blueprint, request, jsonify, current_app
 from flask_login import login_required, current_user
-from app.extensions import db, csrf  # <--- IMPORTAR csrf
+from app.extensions import db, csrf
 from app.models.product import Product
 from app.models.store import Store
 from app.models.review import Review
@@ -8,6 +8,7 @@ from app.models.favorite import Favorite
 from app.models.follower import Follower
 from app.models.category import Category
 from app.models.order import Order, OrderItem
+from app.models.notification import Notification
 from app.utils.decorators import vendor_required, customer_required
 from app.utils.helpers import slugify, save_image, delete_image
 from datetime import datetime
@@ -16,7 +17,9 @@ import traceback
 
 api_bp = Blueprint('api', __name__, url_prefix='/api')
 
-# === CATEGORÍAS API ===
+# ============================================
+# CATEGORÍAS API
+# ============================================
 
 @api_bp.route('/categories', methods=['GET'])
 def get_categories():
@@ -32,7 +35,9 @@ def get_categories():
         } for c in categories]
     })
 
-# === PRODUCTOS API ===
+# ============================================
+# PRODUCTOS API
+# ============================================
 
 @api_bp.route('/products', methods=['GET'])
 def get_products():
@@ -95,10 +100,29 @@ def get_product(product_id):
         'data': product.to_dict()
     })
 
-# --- RUTAS POST, PUT, DELETE CON CSRF DESACTIVADO ---
+@api_bp.route('/store/<store_id>/products', methods=['GET'])
+@login_required
+def get_store_products(store_id):
+    """Obtener productos de una tienda específica (para el dashboard)"""
+    store = Store.query.get_or_404(store_id)
+    
+    # Verificar permisos
+    if store.user_id != current_user.id and not current_user.is_admin():
+        return jsonify({'success': False, 'error': 'No autorizado'}), 403
+    
+    products = Product.query.filter_by(store_id=store_id).all()
+    
+    return jsonify({
+        'success': True,
+        'data': [p.to_dict() for p in products]
+    })
+
+# ============================================
+# CREAR PRODUCTO (POST)
+# ============================================
 
 @api_bp.route('/products', methods=['POST'])
-@csrf.exempt  # <--- DESACTIVAR CSRF
+@csrf.exempt
 @login_required
 def create_product_api():
     print("=" * 50)
@@ -106,7 +130,6 @@ def create_product_api():
     print("=" * 50)
     
     try:
-        # Verificar que el usuario tenga tienda
         store = Store.query.filter_by(user_id=current_user.id).first()
         print(f"👤 Usuario: {current_user.id} - {current_user.full_name}")
         print(f"🏪 Store: {store.id if store else 'No tiene tienda'}")
@@ -115,35 +138,32 @@ def create_product_api():
             print("❌ ERROR: Usuario no tiene tienda")
             return jsonify({'success': False, 'error': 'No tienes una tienda. Crea una primero.'}), 400
         
-        # Obtener datos del formulario
         name = request.form.get('name')
         price = request.form.get('price')
         description = request.form.get('description', '')
         stock = request.form.get('stock', 0)
         category_id = request.form.get('category_id')
+        discount_price = request.form.get('discount_price')
+        min_stock = request.form.get('min_stock', 0)
+        is_featured = request.form.get('is_featured') == 'on'
         
         print(f"📝 Datos recibidos:")
         print(f"   - Nombre: {name}")
         print(f"   - Precio: {price}")
-        print(f"   - Descripción: {description[:50]}..." if description else "   - Descripción: (vacío)")
+        print(f"   - Descuento: {discount_price}")
         print(f"   - Stock: {stock}")
         print(f"   - Categoría: {category_id}")
-        print(f"   - Imagen: {request.files.get('image').filename if request.files.get('image') else 'No'}")
+        print(f"   - Destacado: {is_featured}")
         
-        # Validaciones
         if not name:
-            print("❌ ERROR: Nombre faltante")
             return jsonify({'success': False, 'error': 'El nombre del producto es obligatorio'}), 400
         
         if not price:
-            print("❌ ERROR: Precio faltante")
             return jsonify({'success': False, 'error': 'El precio del producto es obligatorio'}), 400
         
         try:
             price_float = float(price)
-            print(f"   - Precio convertido: {price_float}")
         except ValueError:
-            print(f"❌ ERROR: Precio inválido: {price}")
             return jsonify({'success': False, 'error': 'El precio debe ser un número válido'}), 400
         
         try:
@@ -165,6 +185,20 @@ def create_product_api():
         if category_id:
             product.category_id = category_id
         
+        if discount_price:
+            try:
+                product.discount_price = float(discount_price)
+            except ValueError:
+                pass
+        
+        if min_stock:
+            try:
+                product.min_stock = int(min_stock)
+            except ValueError:
+                pass
+        
+        product.is_featured = is_featured
+        
         # Subir imagen
         if 'image' in request.files:
             file = request.files['image']
@@ -181,7 +215,6 @@ def create_product_api():
         db.session.commit()
         print(f"✅ Producto creado con ID: {product.id}")
         
-        # Actualizar contador
         store.products_count = Product.query.filter_by(store_id=store.id).count()
         db.session.commit()
         print(f"📊 Productos totales en tienda: {store.products_count}")
@@ -200,8 +233,12 @@ def create_product_api():
         print("=" * 50)
         return jsonify({'success': False, 'error': str(e)}), 500
 
+# ============================================
+# ACTUALIZAR PRODUCTO (PUT)
+# ============================================
+
 @api_bp.route('/products/<product_id>', methods=['PUT'])
-@csrf.exempt  # <--- DESACTIVAR CSRF
+@csrf.exempt
 @login_required
 def update_product_api(product_id):
     print("=" * 50)
@@ -216,16 +253,17 @@ def update_product_api(product_id):
         print(f"📦 Producto: {product.name} (ID: {product.id})")
         print(f"🏪 Store: {store.id if store else 'No tiene tienda'}")
         
-        if product.store_id != store.id:
+        if not store or product.store_id != store.id:
             print(f"❌ ERROR: Usuario no es dueño del producto")
             return jsonify({'success': False, 'error': 'No autorizado'}), 403
         
-        # Obtener datos
         name = request.form.get('name', product.name)
         price = request.form.get('price', product.price)
         description = request.form.get('description', product.description)
         stock = request.form.get('stock', product.stock)
         category_id = request.form.get('category_id', product.category_id)
+        discount_price = request.form.get('discount_price')
+        min_stock = request.form.get('min_stock', product.min_stock)
         is_active = request.form.get('is_active') == 'on'
         is_featured = request.form.get('is_featured') == 'on'
         
@@ -233,6 +271,7 @@ def update_product_api(product_id):
         print(f"   - Nombre: {name}")
         print(f"   - Precio: {price}")
         print(f"   - Stock: {stock}")
+        print(f"   - Activo: {is_active}")
         
         product.name = name
         product.price = float(price) if price else product.price
@@ -242,7 +281,20 @@ def update_product_api(product_id):
         product.is_active = is_active
         product.is_featured = is_featured
         
-        # Actualizar imagen
+        if discount_price:
+            try:
+                product.discount_price = float(discount_price)
+            except ValueError:
+                pass
+        else:
+            product.discount_price = None
+        
+        if min_stock:
+            try:
+                product.min_stock = int(min_stock)
+            except ValueError:
+                pass
+        
         if 'image' in request.files:
             file = request.files['image']
             if file and file.filename:
@@ -270,8 +322,12 @@ def update_product_api(product_id):
         print("=" * 50)
         return jsonify({'success': False, 'error': str(e)}), 500
 
+# ============================================
+# ELIMINAR PRODUCTO (DELETE)
+# ============================================
+
 @api_bp.route('/products/<product_id>', methods=['DELETE'])
-@csrf.exempt  # <--- DESACTIVAR CSRF
+@csrf.exempt
 @login_required
 def delete_product_api(product_id):
     print("=" * 50)
@@ -282,7 +338,7 @@ def delete_product_api(product_id):
         product = Product.query.get_or_404(product_id)
         store = Store.query.filter_by(user_id=current_user.id).first()
         
-        if product.store_id != store.id:
+        if not store or product.store_id != store.id:
             print(f"❌ ERROR: Usuario no es dueño del producto")
             return jsonify({'success': False, 'error': 'No autorizado'}), 403
         
@@ -308,10 +364,12 @@ def delete_product_api(product_id):
         print("=" * 50)
         return jsonify({'success': False, 'error': str(e)}), 500
 
-# === RESEÑAS API ===
+# ============================================
+# RESEÑAS API
+# ============================================
 
 @api_bp.route('/reviews', methods=['POST'])
-@csrf.exempt  # <--- DESACTIVAR CSRF
+@csrf.exempt
 @login_required
 def create_review():
     try:
@@ -348,16 +406,19 @@ def create_review():
         
         # Actualizar rating del producto
         product_reviews = Review.query.filter_by(product_id=product_id).all()
-        product.rating_avg = sum(r.rating for r in product_reviews) / len(product_reviews)
-        product.rating_count = len(product_reviews)
-        db.session.commit()
+        if product_reviews:
+            product.rating_avg = sum(r.rating for r in product_reviews) / len(product_reviews)
+            product.rating_count = len(product_reviews)
+            db.session.commit()
         
         # Actualizar rating de la tienda
         store = Store.query.get(product.store_id)
-        store_reviews = Review.query.filter_by(store_id=store.id).all()
-        store.rating_avg = sum(r.rating for r in store_reviews) / len(store_reviews)
-        store.rating_count = len(store_reviews)
-        db.session.commit()
+        if store:
+            store_reviews = Review.query.filter_by(store_id=store.id).all()
+            if store_reviews:
+                store.rating_avg = sum(r.rating for r in store_reviews) / len(store_reviews)
+                store.rating_count = len(store_reviews)
+                db.session.commit()
         
         return jsonify({
             'success': True,
@@ -376,10 +437,12 @@ def get_product_reviews(product_id):
         'data': [r.to_dict() for r in reviews]
     })
 
-# === FAVORITOS API ===
+# ============================================
+# FAVORITOS API
+# ============================================
 
 @api_bp.route('/favorites', methods=['POST'])
-@csrf.exempt  # <--- DESACTIVAR CSRF
+@csrf.exempt
 @login_required
 def toggle_favorite():
     try:
@@ -421,10 +484,12 @@ def get_favorites():
         'data': [p.to_dict() for p in products]
     })
 
-# === FOLLOWERS API ===
+# ============================================
+# SEGUIDORES API
+# ============================================
 
 @api_bp.route('/followers', methods=['POST'])
-@csrf.exempt  # <--- DESACTIVAR CSRF
+@csrf.exempt
 @login_required
 def toggle_follower():
     try:
@@ -482,17 +547,18 @@ def get_followers(store_id):
         'is_following': is_following
     })
 
-# === ÓRDENES API ===
+# ============================================
+# ÓRDENES API
+# ============================================
 
 @api_bp.route('/orders', methods=['POST'])
-@csrf.exempt  # <--- DESACTIVAR CSRF
+@csrf.exempt
 @login_required
 @customer_required
 def create_order_api():
     try:
         data = request.json
         
-        # Crear número de orden
         order_number = f"MZ-{datetime.utcnow().strftime('%Y%m')}-{uuid.uuid4().hex[:4].upper()}"
         
         items = data.get('items', [])
@@ -535,6 +601,19 @@ def create_order_api():
         
         db.session.commit()
         
+        # Notificar al vendedor
+        store = Store.query.get(data['store_id'])
+        if store:
+            notification = Notification(
+                user_id=store.user_id,
+                type='order',
+                title='📦 Nuevo Pedido',
+                message=f'Has recibido un pedido #{order_number} por Bs {total:.2f}',
+                link=f'/orders/{order.id}'
+            )
+            db.session.add(notification)
+            db.session.commit()
+        
         return jsonify({
             'success': True,
             'data': order.to_dict()
@@ -543,3 +622,162 @@ def create_order_api():
     except Exception as e:
         db.session.rollback()
         return jsonify({'error': str(e)}), 400
+
+@api_bp.route('/orders/<order_id>/cancel', methods=['POST'])
+@csrf.exempt
+@login_required
+def cancel_order_api(order_id):
+    try:
+        order = Order.query.get_or_404(order_id)
+        
+        if order.user_id != current_user.id:
+            return jsonify({'error': 'No autorizado'}), 403
+        
+        if order.status not in ['pendiente', 'confirmado']:
+            return jsonify({'error': 'No se puede cancelar este pedido'}), 400
+        
+        order.status = 'cancelado'
+        db.session.commit()
+        
+        return jsonify({'success': True, 'message': 'Pedido cancelado exitosamente'})
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 400
+
+@api_bp.route('/orders/<order_id>/status', methods=['PUT'])
+@csrf.exempt
+@login_required
+def update_order_status_api(order_id):
+    try:
+        order = Order.query.get_or_404(order_id)
+        store = Store.query.filter_by(user_id=current_user.id).first()
+        
+        if not store or order.store_id != store.id:
+            return jsonify({'error': 'No autorizado'}), 403
+        
+        new_status = request.json.get('status')
+        
+        if new_status not in ['pendiente', 'confirmado', 'enviado', 'entregado', 'cancelado']:
+            return jsonify({'error': 'Estado inválido'}), 400
+        
+        order.status = new_status
+        
+        if new_status == 'entregado':
+            order.delivered_at = datetime.utcnow()
+        
+        db.session.commit()
+        
+        # Notificar al cliente
+        notification = Notification(
+            user_id=order.user_id,
+            type='order',
+            title=f'Pedido #{order.order_number}',
+            message=f'Tu pedido ha sido {order.get_status_label()}',
+            link=f'/orders/{order.id}'
+        )
+        db.session.add(notification)
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'data': order.to_dict()
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 400
+
+# ============================================
+# NOTIFICACIONES API
+# ============================================
+
+@api_bp.route('/notifications', methods=['GET'])
+@login_required
+def get_notifications():
+    notifications = Notification.query.filter_by(
+        user_id=current_user.id
+    ).order_by(Notification.created_at.desc()).limit(50).all()
+    
+    return jsonify({
+        'success': True,
+        'data': [n.to_dict() for n in notifications]
+    })
+
+@api_bp.route('/notifications/unread', methods=['GET'])
+@login_required
+def get_unread_notifications():
+    count = Notification.query.filter_by(
+        user_id=current_user.id,
+        is_read=False
+    ).count()
+    
+    return jsonify({'count': count})
+
+@api_bp.route('/notifications/<notification_id>/read', methods=['POST'])
+@csrf.exempt
+@login_required
+def mark_notification_read(notification_id):
+    notification = Notification.query.get_or_404(notification_id)
+    
+    if notification.user_id != current_user.id:
+        return jsonify({'error': 'No autorizado'}), 403
+    
+    notification.is_read = True
+    db.session.commit()
+    
+    return jsonify({'success': True})
+
+@api_bp.route('/notifications/mark-all-read', methods=['POST'])
+@csrf.exempt
+@login_required
+def mark_all_notifications_read():
+    Notification.query.filter_by(
+        user_id=current_user.id,
+        is_read=False
+    ).update({'is_read': True})
+    
+    db.session.commit()
+    return jsonify({'success': True})
+
+# ============================================
+# ESTADÍSTICAS PARA DASHBOARD
+# ============================================
+
+@api_bp.route('/dashboard/stats', methods=['GET'])
+@login_required
+def get_dashboard_stats():
+    store = Store.query.filter_by(user_id=current_user.id).first()
+    
+    if not store:
+        return jsonify({'success': False, 'error': 'No tienes una tienda'}), 400
+    
+    total_products = Product.query.filter_by(store_id=store.id).count()
+    total_orders = Order.query.filter_by(store_id=store.id).count()
+    pending_orders = Order.query.filter_by(store_id=store.id, status='pendiente').count()
+    
+    # Ventas totales
+    sales = db.session.query(db.func.sum(Order.total)).filter(
+        Order.store_id == store.id,
+        Order.status == 'entregado'
+    ).scalar() or 0
+    
+    # Productos con stock bajo
+    low_stock = Product.query.filter(
+        Product.store_id == store.id,
+        Product.stock <= Product.min_stock,
+        Product.stock > 0
+    ).count()
+    
+    return jsonify({
+        'success': True,
+        'data': {
+            'total_products': total_products,
+            'total_orders': total_orders,
+            'pending_orders': pending_orders,
+            'total_sales': float(sales),
+            'low_stock': low_stock,
+            'followers': store.followers_count,
+            'rating': store.rating_avg
+        }
+    })

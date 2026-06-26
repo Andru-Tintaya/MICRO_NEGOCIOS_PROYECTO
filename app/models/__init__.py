@@ -7,3 +7,4 @@ from .review import Review
 from .favorite import Favorite
 from .follower import Follower
 from .notification import Notification
+from .audit_log import AuditLog  # NUEVO

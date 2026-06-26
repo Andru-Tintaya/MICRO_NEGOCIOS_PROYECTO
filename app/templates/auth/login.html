@@ -1,47 +1,59 @@
 {% extends "base.html" %}
-
-{% block title %}Iniciar Sesión - Micro Negocios{% endblock %}
+{% block title %}Iniciar Sesión - MiZona{% endblock %}
 
 {% block content %}
-<div class="auth-container fade-in">
-    <div class="auth-logo">
-        <i class="fas fa-store"></i>
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-5">
+            <div class="card shadow-sm mt-5">
+                <div class="card-body p-4">
+                    <div class="text-center mb-4">
+                        <i class="fas fa-store" style="font-size: 3rem; color: #10B981;"></i>
+                        <h2 class="mt-2">Bienvenido</h2>
+                        <p class="text-muted">Inicia sesión para continuar</p>
+                    </div>
+                    
+                    <form method="POST" action="{{ url_for('auth.login') }}">
+                        {{ form.csrf_token() }}
+                        
+                        <div class="mb-3">
+                            <label for="identifier" class="form-label">
+                                <i class="fas fa-envelope me-1"></i> Email o WhatsApp
+                            </label>
+                            {{ form.identifier(class="form-control", placeholder="ejemplo@email.com o +59170000000") }}
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="password" class="form-label">
+                                <i class="fas fa-lock me-1"></i> Contraseña
+                            </label>
+                            {{ form.password(class="form-control", placeholder="••••••••") }}
+                        </div>
+                        
+                        <div class="mb-3 d-flex justify-content-between align-items-center">
+                            <div class="form-check">
+                                {{ form.remember(class="form-check-input") }}
+                                <label class="form-check-label" for="remember">Recordarme</label>
+                            </div>
+                            <a href="{{ url_for('auth.forgot_password') }}" class="text-decoration-none" style="color: #10B981;">
+                                ¿Olvidaste tu contraseña?
+                            </a>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-primary w-100" style="background: #10B981; border: none;">
+                            <i class="fas fa-sign-in-alt me-2"></i> Iniciar Sesión
+                        </button>
+                    </form>
+                    
+                    <p class="text-center mt-3 text-muted">
+                        ¿No tienes cuenta? 
+                        <a href="{{ url_for('auth.register') }}" style="color: #10B981; font-weight: 600; text-decoration: none;">
+                            Regístrate aquí
+                        </a>
+                    </p>
+                </div>
+            </div>
+        </div>
     </div>
-    <h2>Bienvenido</h2>
-    <p class="subtitle">Inicia sesión para continuar</p>
-    
-    <form method="POST" action="{{ url_for('auth.login') }}">
-        {{ form.csrf_token() }}
-        
-        <div class="form-group">
-            <label for="identifier"><i class="fas fa-envelope"></i> Email o WhatsApp</label>
-            {{ form.identifier(class="form-control", placeholder="ejemplo@email.com o +59170000000") }}
-        </div>
-        
-        <div class="form-group">
-            <label for="password"><i class="fas fa-lock"></i> Contraseña</label>
-            {{ form.password(class="form-control", placeholder="••••••••") }}
-        </div>
-        
-        <div class="form-group flex flex-between">
-            <label style="display: flex; align-items: center; gap: 0.5rem; font-weight: 400; color: var(--text-secondary);">
-                {{ form.remember() }} Recordarme
-            </label>
-            <a href="{{ url_for('auth.forgot_password') }}" style="color: var(--primary); text-decoration: none;">
-                ¿Olvidaste tu contraseña?
-            </a>
-        </div>
-        
-        <button type="submit" class="btn btn-primary btn-block">
-            <i class="fas fa-sign-in-alt"></i> Iniciar Sesión
-        </button>
-    </form>
-    
-    <p class="text-center mt-3" style="color: var(--text-secondary);">
-        ¿No tienes cuenta? 
-        <a href="{{ url_for('auth.register') }}" style="color: var(--primary); text-decoration: none; font-weight: 600;">
-            Regístrate aquí
-        </a>
-    </p>
 </div>
 {% endblock %}

@@ -279,6 +279,15 @@
                 </label>
             </div>
             
+            <!-- ============================================ -->
+            <!-- ✅ CAMPO AGREGADO: Producto Activo            -->
+            <!-- ============================================ -->
+            <div class="form-group checkbox">
+                <label>
+                    <input type="checkbox" id="productActive" checked> Producto Activo
+                </label>
+            </div>
+            
             <button type="submit" class="btn-primary btn-block">
                 <i class="fas fa-save"></i> Guardar Producto
             </button>
@@ -289,146 +298,201 @@
 
 {% block extra_js %}
 <script>
-// Variables globales
-let editProductId = null;
-
-// Mostrar modal para nuevo producto
-function showAddProductModal() {
-    editProductId = null;
-    document.getElementById('modalTitle').textContent = 'Nuevo Producto';
-    document.getElementById('productForm').reset();
-    document.getElementById('imagePreview').style.display = 'none';
-    document.getElementById('productModal').style.display = 'block';
-}
-
-// Mostrar modal para editar producto
-function showEditProductModal(productId) {
-    editProductId = productId;
-    document.getElementById('modalTitle').textContent = 'Editar Producto';
-    document.getElementById('productModal').style.display = 'block';
+    // ============================================
+    // VARIABLES GLOBALES
+    // ============================================
+    let editProductId = null;
+    let currentStoreId = '{{ store.id }}';
     
-    // Cargar datos del producto
-    fetch(`/api/products/${productId}`)
-        .then(res => res.json())
-        .then(data => {
-            if (data.success) {
-                const p = data.data;
-                document.getElementById('productName').value = p.name;
-                document.getElementById('productPrice').value = p.price;
-                document.getElementById('productDiscount').value = p.discount_price || '';
-                document.getElementById('productStock').value = p.stock;
-                document.getElementById('productMinStock').value = p.min_stock || 0;
-                document.getElementById('productCategory').value = p.category_id || '';
-                document.getElementById('productDesc').value = p.description || '';
-                document.getElementById('productFeatured').checked = p.is_featured || false;
-                
-                if (p.image_url) {
-                    const preview = document.getElementById('imagePreview');
-                    preview.src = p.image_url;
-                    preview.style.display = 'block';
+    // ============================================
+    // MOSTRAR MODAL PARA NUEVO PRODUCTO
+    // ============================================
+    function showAddProductModal() {
+        editProductId = null;
+        document.getElementById('modalTitle').textContent = 'Nuevo Producto';
+        document.getElementById('productForm').reset();
+        document.getElementById('imagePreview').style.display = 'none';
+        document.getElementById('productModal').style.display = 'block';
+    }
+    
+    // ============================================
+    // MOSTRAR MODAL PARA EDITAR PRODUCTO
+    // ============================================
+    function showEditProductModal(productId) {
+        editProductId = productId;
+        document.getElementById('modalTitle').textContent = 'Editar Producto';
+        document.getElementById('productModal').style.display = 'block';
+        
+        // Cargar datos del producto - USANDO LA RUTA CORRECTA
+        fetch(`/api/products/${productId}`)
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    const p = data.data;
+                    document.getElementById('productName').value = p.name || '';
+                    document.getElementById('productPrice').value = p.price || '';
+                    document.getElementById('productDiscount').value = p.discount_price || '';
+                    document.getElementById('productStock').value = p.stock || 0;
+                    document.getElementById('productMinStock').value = p.min_stock || 0;
+                    document.getElementById('productCategory').value = p.category_id || '';
+                    document.getElementById('productDesc').value = p.description || '';
+                    document.getElementById('productFeatured').checked = p.is_featured || false;
+                    document.getElementById('productActive').checked = p.is_active !== false;
+                    
+                    // Mostrar imagen existente
+                    if (p.image_url) {
+                        const preview = document.getElementById('imagePreview');
+                        preview.src = p.image_url;
+                        preview.style.display = 'block';
+                    }
+                } else {
+                    alert('Error al cargar el producto: ' + (data.error || 'Desconocido'));
                 }
-            }
-        });
-}
-
-// Cerrar modal
-function closeProductModal() {
-    document.getElementById('productModal').style.display = 'none';
-}
-
-// Eliminar producto
-function deleteProduct(productId) {
-    if (confirm('¿Estás seguro de eliminar este producto?')) {
-        fetch(`/api/products/${productId}`, { method: 'DELETE' })
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error de conexión al cargar el producto');
+            });
+    }
+    
+    // ============================================
+    // CERRAR MODAL
+    // ============================================
+    function closeProductModal() {
+        document.getElementById('productModal').style.display = 'none';
+    }
+    
+    // ============================================
+    // ELIMINAR PRODUCTO
+    // ============================================
+    function deleteProduct(productId) {
+        if (confirm('¿Estás seguro de eliminar este producto?')) {
+            fetch(`/api/products/${productId}`, { 
+                method: 'DELETE',
+                headers: {
+                    'X-CSRFToken': document.querySelector('meta[name="csrf-token"]')?.content || ''
+                }
+            })
             .then(res => res.json())
             .then(data => {
                 if (data.success) {
                     location.reload();
                 } else {
-                    alert('Error: ' + data.error);
+                    alert('Error: ' + (data.error || 'Desconocido'));
                 }
             })
             .catch(error => {
-                alert('Error al eliminar el producto');
+                console.error('Error:', error);
+                alert('Error de conexión al eliminar el producto');
             });
-    }
-}
-
-// Manejar el formulario
-document.getElementById('productForm').addEventListener('submit', async function(e) {
-    e.preventDefault();
-    
-    const formData = new FormData();
-    formData.append('name', document.getElementById('productName').value);
-    formData.append('price', document.getElementById('productPrice').value);
-    formData.append('discount_price', document.getElementById('productDiscount').value || '');
-    formData.append('stock', document.getElementById('productStock').value);
-    formData.append('min_stock', document.getElementById('productMinStock').value || 0);
-    formData.append('category_id', document.getElementById('productCategory').value || '');
-    formData.append('description', document.getElementById('productDesc').value);
-    formData.append('is_featured', document.getElementById('productFeatured').checked ? 'on' : 'off');
-    
-    const fileInput = document.getElementById('productImage');
-    if (fileInput.files[0]) {
-        formData.append('image', fileInput.files[0]);
-    }
-    
-    const url = editProductId ? `/api/products/${editProductId}` : '/api/products';
-    const method = editProductId ? 'PUT' : 'POST';
-    
-    try {
-        const response = await fetch(url, {
-            method: method,
-            body: formData
-        });
-        
-        const result = await response.json();
-        
-        if (result.success) {
-            alert('✅ Producto guardado con éxito');
-            location.reload();
-        } else {
-            alert('❌ Error: ' + result.error);
         }
-    } catch (error) {
-        alert('❌ Error de conexión');
     }
-});
-
-// Subir imagen con preview
-document.getElementById('productImage').addEventListener('change', function(e) {
-    const file = e.target.files[0];
-    if (file) {
-        const reader = new FileReader();
-        reader.onload = function(ev) {
-            const preview = document.getElementById('imagePreview');
-            preview.src = ev.target.result;
-            preview.style.display = 'block';
-        };
-        reader.readAsDataURL(file);
-    }
-});
-
-// Navegación del sidebar
-document.querySelectorAll('.nav-item[data-section]').forEach(item => {
-    item.addEventListener('click', function(e) {
+    
+    // ============================================
+    // MANEJAR EL FORMULARIO
+    // ============================================
+    document.getElementById('productForm')?.addEventListener('submit', async function(e) {
         e.preventDefault();
-        // Remover active de todos
-        document.querySelectorAll('.nav-item[data-section]').forEach(n => n.classList.remove('active'));
-        document.querySelectorAll('.content-section').forEach(s => s.classList.remove('active'));
         
-        this.classList.add('active');
-        const sectionId = this.dataset.section;
-        document.getElementById(sectionId).classList.add('active');
+        console.log('📤 Enviando formulario...');
+        
+        const formData = new FormData();
+        formData.append('name', document.getElementById('productName').value);
+        formData.append('price', document.getElementById('productPrice').value);
+        formData.append('discount_price', document.getElementById('productDiscount').value || '');
+        formData.append('stock', document.getElementById('productStock').value || 0);
+        formData.append('min_stock', document.getElementById('productMinStock').value || 0);
+        formData.append('category_id', document.getElementById('productCategory').value || '');
+        formData.append('description', document.getElementById('productDesc').value || '');
+        formData.append('is_featured', document.getElementById('productFeatured').checked ? 'on' : 'off');
+        formData.append('is_active', document.getElementById('productActive')?.checked ? 'on' : 'off');
+        
+        const fileInput = document.getElementById('productImage');
+        if (fileInput.files && fileInput.files[0]) {
+            formData.append('image', fileInput.files[0]);
+            console.log('📷 Imagen seleccionada:', fileInput.files[0].name);
+        }
+        
+        const url = editProductId ? `/api/products/${editProductId}` : '/api/products';
+        const method = editProductId ? 'PUT' : 'POST';
+        
+        console.log(`📤 ${method} ${url}`);
+        
+        try {
+            const response = await fetch(url, {
+                method: method,
+                body: formData,
+                headers: {
+                    'X-CSRFToken': document.querySelector('meta[name="csrf-token"]')?.content || ''
+                }
+            });
+            
+            const result = await response.json();
+            console.log('📥 Respuesta:', result);
+            
+            if (result.success) {
+                alert('✅ Producto guardado con éxito');
+                location.reload();
+            } else {
+                alert('❌ Error: ' + (result.error || 'Desconocido'));
+            }
+        } catch (error) {
+            console.error('❌ Error de conexión:', error);
+            alert('❌ Error de conexión al guardar el producto');
+        }
     });
-});
-
-// Cerrar modal al hacer clic fuera
-window.onclick = function(event) {
-    const modal = document.getElementById('productModal');
-    if (event.target === modal) {
-        closeProductModal();
-    }
-};
+    
+    // ============================================
+    // PREVIEW DE IMAGEN
+    // ============================================
+    document.getElementById('productImage')?.addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(ev) {
+                const preview = document.getElementById('imagePreview');
+                preview.src = ev.target.result;
+                preview.style.display = 'block';
+            };
+            reader.readAsDataURL(file);
+        }
+    });
+    
+    // ============================================
+    // NAVEGACIÓN DEL SIDEBAR
+    // ============================================
+    document.querySelectorAll('.nav-item[data-section]').forEach(item => {
+        item.addEventListener('click', function(e) {
+            e.preventDefault();
+            // Remover active de todos
+            document.querySelectorAll('.nav-item[data-section]').forEach(n => n.classList.remove('active'));
+            document.querySelectorAll('.content-section').forEach(s => s.classList.remove('active'));
+            
+            this.classList.add('active');
+            const sectionId = this.dataset.section;
+            const section = document.getElementById(sectionId);
+            if (section) {
+                section.classList.add('active');
+            }
+        });
+    });
+    
+    // ============================================
+    // CERRAR MODAL AL HACER CLIC FUERA
+    // ============================================
+    window.onclick = function(event) {
+        const modal = document.getElementById('productModal');
+        if (event.target === modal) {
+            closeProductModal();
+        }
+    };
+    
+    // ============================================
+    // INICIALIZAR - CARGAR PRODUCTOS CON STOCK BAJO
+    // ============================================
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log('🚀 Dashboard inicializado');
+        console.log('🏪 Store ID:', currentStoreId);
+    });
 </script>
 {% endblock %}
