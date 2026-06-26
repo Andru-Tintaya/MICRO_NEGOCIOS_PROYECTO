@@ -43,12 +43,17 @@ def save_image(file, folder='products'):
     except Exception:
         pass
     
-    # 🔥 CAMBIO IMPORTANTE: Devolver la URL completa para static
+    # ✅ CORREGIDO: Devuelve la URL completa con /static/
     return f"/static/uploads/{folder}/{filename}"
 
 def delete_image(filepath):
     if not filepath:
         return False
+    
+    # Eliminar /static/ del inicio para obtener la ruta relativa
+    if filepath.startswith('/static/'):
+        filepath = filepath.replace('/static/', '', 1)
+    
     full_path = os.path.join(current_app.root_path, 'static', filepath)
     if os.path.exists(full_path):
         os.remove(full_path)
