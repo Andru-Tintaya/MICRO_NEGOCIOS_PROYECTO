@@ -1,93 +1,107 @@
 {% extends "base.html" %}
-
 {% block title %}Editar Tienda - {{ store.name }}{% endblock %}
 
 {% block content %}
-<div class="auth-container">
-    <div class="auth-card" data-aos="fade-up">
-        <div class="auth-header">
-            <i class="fas fa-store"></i>
-            <h2>Editar Tienda</h2>
-            <p>Actualiza la información de tu negocio</p>
-        </div>
-        
-        <form method="POST" enctype="multipart/form-data">
-            <div class="form-group">
-                <label><i class="fas fa-store"></i> Nombre de la Tienda *</label>
-                <input type="text" name="name" value="{{ store.name }}" required>
-            </div>
-            
-            <div class="form-group">
-                <label><i class="fas fa-align-left"></i> Descripción</label>
-                <textarea name="description" rows="3">{{ store.description or '' }}</textarea>
-            </div>
-            
-            <div class="form-group">
-                <label><i class="fab fa-whatsapp"></i> WhatsApp de Contacto *</label>
-                <input type="tel" name="whatsapp" value="{{ store.whatsapp }}" required>
-            </div>
-            
-            <div class="form-group">
-                <label><i class="fas fa-map-marker-alt"></i> Ciudad *</label>
-                <select name="city" required>
-                    <option value="Santa Cruz" {% if store.city == 'Santa Cruz' %}selected{% endif %}>Santa Cruz</option>
-                    <option value="La Paz" {% if store.city == 'La Paz' %}selected{% endif %}>La Paz</option>
-                    <option value="Cochabamba" {% if store.city == 'Cochabamba' %}selected{% endif %}>Cochabamba</option>
-                    <option value="El Alto" {% if store.city == 'El Alto' %}selected{% endif %}>El Alto</option>
-                    <option value="Tarija" {% if store.city == 'Tarija' %}selected{% endif %}>Tarija</option>
-                    <option value="Sucre" {% if store.city == 'Sucre' %}selected{% endif %}>Sucre</option>
-                    <option value="Potosi" {% if store.city == 'Potosi' %}selected{% endif %}>Potosí</option>
-                    <option value="Oruro" {% if store.city == 'Oruro' %}selected{% endif %}>Oruro</option>
-                    <option value="Beni" {% if store.city == 'Beni' %}selected{% endif %}>Beni</option>
-                    <option value="Pando" {% if store.city == 'Pando' %}selected{% endif %}>Pando</option>
-                </select>
-            </div>
-            
-            <div class="form-group">
-                <label><i class="fas fa-map-pin"></i> Dirección</label>
-                <input type="text" name="address" value="{{ store.address or '' }}" placeholder="Calle, número, zona...">
-            </div>
-            
-            <div class="form-group">
-                <label><i class="fas fa-tag"></i> Categoría Principal</label>
-                <select name="category_id">
-                    <option value="">Sin categoría</option>
-                    {% for category in categories %}
-                    <option value="{{ category.id }}" {% if store.category_id == category.id %}selected{% endif %}>
-                        {{ category.name }}
-                    </option>
-                    {% endfor %}
-                </select>
-            </div>
-            
-            <div class="form-group">
-                <label><i class="fas fa-image"></i> Logo de la Tienda</label>
-                <div class="image-upload">
-                    {% if store.logo_url %}
-                    <img src="{{ store.logo_url }}" style="max-width: 150px; margin-bottom: 10px;">
-                    {% endif %}
-                    <input type="file" name="logo" accept="image/*">
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card shadow-sm mt-4">
+                <div class="card-body p-4">
+                    <div class="text-center mb-4">
+                        <i class="fas fa-store" style="font-size: 3rem; color: #10B981;"></i>
+                        <h2 class="mt-2">Editar Tienda</h2>
+                        <p class="text-muted">Actualiza la información de tu negocio</p>
+                    </div>
+                    
+                    <form method="POST" enctype="multipart/form-data">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        
+                        <div class="mb-3">
+                            <label class="form-label"><i class="fas fa-store me-1"></i> Nombre de la Tienda *</label>
+                            <input type="text" name="name" class="form-control" value="{{ store.name }}" required>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label"><i class="fas fa-align-left me-1"></i> Descripción</label>
+                            <textarea name="description" class="form-control" rows="3">{{ store.description or '' }}</textarea>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label"><i class="fab fa-whatsapp me-1"></i> WhatsApp de Contacto *</label>
+                            <input type="tel" name="whatsapp" class="form-control" value="{{ store.whatsapp }}" required>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label"><i class="fas fa-map-marker-alt me-1"></i> Ciudad *</label>
+                            <select name="city" class="form-select" required>
+                                <option value="Santa Cruz" {% if store.city == 'Santa Cruz' %}selected{% endif %}>Santa Cruz</option>
+                                <option value="La Paz" {% if store.city == 'La Paz' %}selected{% endif %}>La Paz</option>
+                                <option value="Cochabamba" {% if store.city == 'Cochabamba' %}selected{% endif %}>Cochabamba</option>
+                                <option value="El Alto" {% if store.city == 'El Alto' %}selected{% endif %}>El Alto</option>
+                                <option value="Tarija" {% if store.city == 'Tarija' %}selected{% endif %}>Tarija</option>
+                                <option value="Sucre" {% if store.city == 'Sucre' %}selected{% endif %}>Sucre</option>
+                                <option value="Potosi" {% if store.city == 'Potosi' %}selected{% endif %}>Potosí</option>
+                                <option value="Oruro" {% if store.city == 'Oruro' %}selected{% endif %}>Oruro</option>
+                                <option value="Beni" {% if store.city == 'Beni' %}selected{% endif %}>Beni</option>
+                                <option value="Pando" {% if store.city == 'Pando' %}selected{% endif %}>Pando</option>
+                            </select>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label"><i class="fas fa-map-pin me-1"></i> Dirección</label>
+                            <input type="text" name="address" class="form-control" value="{{ store.address or '' }}" placeholder="Calle, número, zona...">
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label"><i class="fas fa-tag me-1"></i> Categoría Principal</label>
+                            <select name="category_id" class="form-select">
+                                <option value="">Sin categoría</option>
+                                {% for category in categories %}
+                                <option value="{{ category.id }}" {% if store.category_id == category.id %}selected{% endif %}>
+                                    {{ category.name }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label"><i class="fas fa-image me-1"></i> Logo de la Tienda</label>
+                            {% if store.logo_url %}
+                            <div class="mb-2">
+                                <img src="{{ store.logo_url }}" style="max-width: 150px; border-radius: 8px; border: 1px solid #E2E8F0;">
+                            </div>
+                            {% endif %}
+                            <input type="file" name="logo" class="form-control" accept="image/*">
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label"><i class="fas fa-image me-1"></i> Banner de la Tienda</label>
+                            {% if store.banner_url %}
+                            <div class="mb-2">
+                                <img src="{{ store.banner_url }}" style="max-width: 300px; border-radius: 8px; border: 1px solid #E2E8F0;">
+                            </div>
+                            {% endif %}
+                            <input type="file" name="banner" class="form-control" accept="image/*">
+                        </div>
+                        
+                        <div class="mb-3 form-check">
+                            <input type="checkbox" name="is_active" class="form-check-input" id="isActive" {% if store.is_active %}checked{% endif %}>
+                            <label class="form-check-label" for="isActive">Tienda Activa</label>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-primary w-100" style="background: #10B981; border: none;">
+                            <i class="fas fa-save me-2"></i> Actualizar Tienda
+                        </button>
+                    </form>
+                    
+                    <!-- ✅ CORREGIDO: Eliminar el botón de eliminar que no existe -->
+                    <div class="mt-3 text-center">
+                        <a href="{{ url_for('store.dashboard') }}" class="btn btn-secondary">
+                            <i class="fas fa-arrow-left me-2"></i> Volver al Dashboard
+                        </a>
+                    </div>
                 </div>
             </div>
-            
-            <div class="form-group checkbox">
-                <label>
-                    <input type="checkbox" name="is_active" {% if store.is_active %}checked{% endif %}> Tienda Activa
-                </label>
-            </div>
-            
-            <button type="submit" class="btn-primary btn-block">
-                <i class="fas fa-save"></i> Actualizar Tienda
-            </button>
-        </form>
-        
-        <div style="margin-top: 20px; text-align: center;">
-            <form method="POST" action="{{ url_for('store.delete') }}" 
-                  onsubmit="return confirm('¿Estás seguro de desactivar tu tienda?')">
-                <button type="submit" class="btn-danger" style="background: #EF4444; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer;">
-                    <i class="fas fa-trash"></i> Desactivar Tienda
-                </button>
-            </form>
         </div>
     </div>
 </div>
