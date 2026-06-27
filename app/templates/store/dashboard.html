@@ -28,12 +28,13 @@
                 <i class="fas fa-shopping-bag"></i> Pedidos
                 <span class="badge">{{ total_orders }}</span>
             </a>
-            <a href="#" class="nav-item" data-section="reviews">
-                <i class="fas fa-star"></i> Reseñas
+            <a href="{{ url_for('favorite.list') }}" class="nav-item">
+                <i class="fas fa-heart"></i> Favoritos
                 <span class="badge">0</span>
             </a>
-            <a href="#" class="nav-item" data-section="stats">
-                <i class="fas fa-chart-line"></i> Estadísticas
+            <a href="{{ url_for('notification.list') }}" class="nav-item">
+                <i class="fas fa-bell"></i> Notificaciones
+                <span class="badge">0</span>
             </a>
             <a href="{{ url_for('store.edit_store') }}" class="nav-item">
                 <i class="fas fa-cog"></i> Configuración
@@ -178,25 +179,14 @@
         </section>
         
         <!-- Reviews Section -->
-        <section id="reviews" class="content-section">
-            <h2>⭐ Reseñas de Clientes</h2>
+         <!-- ✅ SECCIÓN DE FAVORITOS (UNIFICADA) -->
+        <section id="favorites" class="content-section">
+            <h2>❤️ Mis Favoritos</h2>
             <div style="text-align: center; padding: 30px 20px; background: #F8FAFC; border-radius: 12px;">
-                <i class="fas fa-star" style="font-size: 2.5rem; color: #F59E0B; margin-bottom: 12px;"></i>
-                <p style="color: #64748B; max-width: 400px; margin: 0 auto 12px;">Visualiza y responde a las reseñas de tus clientes</p>
-                <a href="#" class="btn-primary" style="display: inline-block; padding: 10px 24px; background: #F59E0B;">
-                    <i class="fas fa-arrow-right"></i> Ver reseñas
-                </a>
-            </div>
-        </section>
-        
-        <!-- Stats Section -->
-        <section id="stats" class="content-section">
-            <h2>📊 Estadísticas</h2>
-            <div style="text-align: center; padding: 30px 20px; background: #F8FAFC; border-radius: 12px;">
-                <i class="fas fa-chart-line" style="font-size: 2.5rem; color: #3B82F6; margin-bottom: 12px;"></i>
-                <p style="color: #64748B; max-width: 400px; margin: 0 auto 12px;">Analiza el rendimiento de tu tienda</p>
-                <a href="#" class="btn-primary" style="display: inline-block; padding: 10px 24px; background: #3B82F6;">
-                    <i class="fas fa-arrow-right"></i> Ver estadísticas
+                <i class="fas fa-heart" style="font-size: 2.5rem; color: #EF4444; margin-bottom: 12px;"></i>
+                <p style="color: #64748B; max-width: 400px; margin: 0 auto 12px;">Administra tus productos favoritos</p>
+                <a href="{{ url_for('favorite.list') }}" class="btn-primary" style="display: inline-block; padding: 10px 24px; background: #EF4444;">
+                    <i class="fas fa-arrow-right"></i> Ver Favoritos
                 </a>
             </div>
         </section>
