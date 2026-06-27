@@ -1,30 +1,39 @@
 import os
 from dotenv import load_dotenv
 
-load_dotenv()  # Carga las variables de entorno desde .env
+load_dotenv()
 
 class Config:
     SECRET_KEY = os.environ.get('SECRET_KEY') or 'dev-secret-key-2026'
-    # Usa la variable de entorno, y si no existe, usa la ruta por defecto
-    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or 'sqlite:///instance/micro_negocios.db'
+    
+    # ✅ DETECTAR AUTOMÁTICAMENTE PostgreSQL vs SQLite
+    database_url = os.environ.get('DATABASE_URL')
+    if database_url and database_url.startswith('postgresql://'):
+        # Usar PostgreSQL (Supabase en producción)
+        SQLALCHEMY_DATABASE_URI = database_url
+    else:
+        # Usar SQLite (desarrollo local)
+        SQLALCHEMY_DATABASE_URI = database_url or 'sqlite:///instance/micro_negocios.db'
+    
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SECURE = os.environ.get('PRODUCTION', 'False') == 'True'
     SESSION_COOKIE_SAMESITE = 'Lax'
     PERMANENT_SESSION_LIFETIME = 86400
+    
+    # Supabase Storage
     SUPABASE_URL = os.environ.get('SUPABASE_URL')
     SUPABASE_KEY = os.environ.get('SUPABASE_KEY')
     SUPABASE_SERVICE_KEY = os.environ.get('SUPABASE_SERVICE_KEY')
     SUPABASE_BUCKET = os.environ.get('SUPABASE_BUCKET', 'product-images')
+    
+    # Uploads
     MAX_CONTENT_LENGTH = 16 * 1024 * 1024
     UPLOAD_FOLDER = 'app/static/uploads'
     ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
 
 class DevelopmentConfig(Config):
     DEBUG = True
-    # NO SOBRESCRIBIMOS SQLALCHEMY_DATABASE_URI, usamos la de Config
-    # Si quieres forzar una ruta específica en desarrollo, puedes descomentar:
-    # SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or 'sqlite:///instance/micro_negocios.db'
     SESSION_COOKIE_SECURE = False
 
 class ProductionConfig(Config):
