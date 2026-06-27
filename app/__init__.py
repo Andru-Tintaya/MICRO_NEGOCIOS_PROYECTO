@@ -1,5 +1,6 @@
 from flask import Flask, redirect, url_for, flash, render_template
 from flask_login import current_user
+from flask_wtf.csrf import CSRFError  # ← AGREGAR ESTA IMPORTACIÓN
 from app.extensions import db, login_manager, csrf, mail
 from app.config import DevelopmentConfig, ProductionConfig
 import os
@@ -24,6 +25,12 @@ def create_app(config_class=None):
     csrf.init_app(app)
     mail.init_app(app)
     
+    # ✅ MANEJADOR DE ERRORES CSRF (AGREGAR ESTO)
+    @app.errorhandler(CSRFError)
+    def handle_csrf_error(e):
+        flash('El token de seguridad ha expirado. Por favor, recarga la página.', 'error')
+        return redirect(url_for('auth.login'))
+    
     login_manager.login_view = 'auth.login'
     login_manager.login_message = 'Por favor inicia sesión para acceder.'
     login_manager.login_message_category = 'warning'
@@ -39,10 +46,7 @@ def create_app(config_class=None):
     app.register_blueprint(product.product_bp, url_prefix='/product')
     app.register_blueprint(category.category_bp, url_prefix='/category')
     app.register_blueprint(review.review_bp, url_prefix='/review')
-    
-    # ✅ CORREGIDO: cambiar '/order' a '/orders'
     app.register_blueprint(order.order_bp, url_prefix='/orders')
-    
     app.register_blueprint(favorite.favorite_bp, url_prefix='/favorite')
     app.register_blueprint(follower.follower_bp, url_prefix='/follower')
     app.register_blueprint(notification.notification_bp, url_prefix='/notification')

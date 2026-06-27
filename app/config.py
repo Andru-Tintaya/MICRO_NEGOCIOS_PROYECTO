@@ -6,9 +6,10 @@ load_dotenv()
 class Config:
     SECRET_KEY = os.environ.get('SECRET_KEY') or 'dev-secret-key-2026'
     
-    # ✅ CONFIGURACIÓN CSRF (NUEVO)
+    # ✅ CONFIGURACIÓN CSRF
     WTF_CSRF_ENABLED = True
     WTF_CSRF_SECRET_KEY = os.environ.get('SECRET_KEY') or 'dev-secret-key-2026'
+    WTF_CSRF_TIME_LIMIT = 3600  # ← AGREGAR ESTA LÍNEA
     
     # ✅ DETECTAR AUTOMÁTICAMENTE PostgreSQL vs SQLite
     database_url = os.environ.get('DATABASE_URL')
