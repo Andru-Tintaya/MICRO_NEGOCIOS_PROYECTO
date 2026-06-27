@@ -4,7 +4,6 @@
 
 {% block content %}
 <div class="admin-container">
-    <!-- Sidebar -->
     <aside class="admin-sidebar">
         <div class="sidebar-header">
             <i class="fas fa-crown"></i>
@@ -40,7 +39,6 @@
             </div>
         </header>
 
-        <!-- Filtros -->
         <div class="admin-filters">
             <div class="search-box">
                 <input type="text" id="searchUser" placeholder="Buscar usuario..." onkeyup="filterUsers()">
@@ -59,7 +57,6 @@
             </select>
         </div>
 
-        <!-- Tabla de usuarios -->
         <div class="table-container">
             <table class="admin-table">
                 <thead>
@@ -101,7 +98,6 @@
                         <td>{{ user.created_at.strftime('%d/%m/%Y') }}</td>
                         <td>
                             <div class="action-buttons">
-                                <!-- Activar/Desactivar -->
                                 <form method="POST" action="{{ url_for('admin.toggle_user', user_id=user.id) }}" style="display: inline;">
                                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                     <button type="submit" class="btn-toggle" title="{% if user.is_active %}Desactivar{% else %}Activar{% endif %}">
@@ -109,7 +105,6 @@
                                     </button>
                                 </form>
 
-                                <!-- Cambiar Rol -->
                                 <form method="POST" action="{{ url_for('admin.change_role', user_id=user.id) }}" style="display: inline;">
                                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                     <select name="role" onchange="this.form.submit()" class="role-select">
@@ -130,7 +125,6 @@
             </table>
         </div>
 
-        <!-- Paginación -->
         {% if users.pages > 1 %}
         <div class="pagination">
             {% if users.has_prev %}
@@ -152,7 +146,6 @@
 </div>
 
 <style>
-/* (ESTILOS COMPLETOS) */
 .admin-container { display: flex; min-height: calc(100vh - 70px); background: #F1F5F9; }
 .admin-sidebar { width: 260px; background: #0F172A; color: #F8FAFC; padding: 20px 0; position: sticky; top: 70px; height: calc(100vh - 70px); overflow-y: auto; }
 .sidebar-header { padding: 0 20px 20px; border-bottom: 1px solid #1E293B; }
