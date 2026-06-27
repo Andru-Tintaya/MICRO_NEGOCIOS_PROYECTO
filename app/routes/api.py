@@ -142,7 +142,7 @@ def create_product_api():
         price = request.form.get('price')
         description = request.form.get('description', '')
         stock = request.form.get('stock', 0)
-        category_id = request.form.get('category_id')
+        category_id = request.form.get('category_id') or None  # ✅ CORREGIDO
         discount_price = request.form.get('discount_price')
         min_stock = request.form.get('min_stock', 0)
         is_featured = request.form.get('is_featured') == 'on'
@@ -150,10 +150,7 @@ def create_product_api():
         print(f"📝 Datos recibidos:")
         print(f"   - Nombre: {name}")
         print(f"   - Precio: {price}")
-        print(f"   - Descuento: {discount_price}")
-        print(f"   - Stock: {stock}")
         print(f"   - Categoría: {category_id}")
-        print(f"   - Destacado: {is_featured}")
         
         if not name:
             return jsonify({'success': False, 'error': 'El nombre del producto es obligatorio'}), 400
@@ -179,11 +176,10 @@ def create_product_api():
             price=price_float,
             description=description,
             stock=stock_int,
-            is_active=True
+            category_id=category_id,  # ✅ Ya es None si está vacío
+            is_active=True,
+            is_featured=is_featured
         )
-        
-        if category_id:
-            product.category_id = category_id
         
         if discount_price:
             try:
@@ -197,23 +193,34 @@ def create_product_api():
             except ValueError:
                 pass
         
-        product.is_featured = is_featured
-        
-        # Subir imagen
+        # ✅ PROCESAR IMAGEN CON LOGS MEJORADOS
         if 'image' in request.files:
             file = request.files['image']
+            print(f"📷 Archivo recibido: {file.filename if file else 'None'}")
             if file and file.filename:
                 print(f"📷 Subiendo imagen: {file.filename}")
                 try:
                     filename = save_image(file, f'products/{store.id}')
-                    product.image_url = filename
-                    print(f"✅ Imagen guardada: {filename}")
+                    print(f"📷 save_image devolvió: {filename}")
+                    if filename:
+                        product.image_url = filename
+                        print(f"✅ Imagen guardada: {filename}")
+                    else:
+                        print(f"⚠️ save_image devolvió None - la imagen NO se guardó")
                 except Exception as img_error:
-                    print(f"⚠️ Error al subir imagen: {str(img_error)}")
+                    print(f"❌ Error al subir imagen: {str(img_error)}")
+                    import traceback
+                    traceback.print_exc()
+            else:
+                print(f"⚠️ El archivo está vacío o no tiene nombre")
+        else:
+            print(f"⚠️ No se recibió 'image' en request.files")
+            print(f"📋 request.files: {request.files}")
         
         db.session.add(product)
         db.session.commit()
         print(f"✅ Producto creado con ID: {product.id}")
+        print(f"📷 URL de imagen final: {product.image_url}")
         
         store.products_count = Product.query.filter_by(store_id=store.id).count()
         db.session.commit()
