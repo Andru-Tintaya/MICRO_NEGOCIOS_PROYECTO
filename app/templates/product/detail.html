@@ -28,7 +28,19 @@
                     <span>{{ product.name }}</span>
                 </div>
                 
-                <h1>{{ product.name }}</h1>
+                <!-- ✅ TÍTULO + BOTÓN DE FAVORITOS -->
+                <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 8px; flex-wrap: wrap;">
+                    <h1 style="margin: 0; font-size: 2rem;">{{ product.name }}</h1>
+                    
+                    <!-- ✅ BOTÓN DE FAVORITOS -->
+                    <button onclick="toggleFavorite('{{ product.id }}')" 
+                            class="btn-favorite" 
+                            id="favoriteBtn"
+                            title="Agregar a favoritos"
+                            aria-label="Favorito">
+                        <i class="fas fa-heart" id="favoriteIcon"></i>
+                    </button>
+                </div>
                 
                 <div class="product-rating-large">
                     <div class="stars">
@@ -223,6 +235,42 @@
     font-size: 2rem;
     font-weight: 800;
     margin-bottom: 12px;
+}
+
+/* ✅ BOTÓN DE FAVORITOS */
+.btn-favorite {
+    background: none;
+    border: none;
+    font-size: 2rem;
+    cursor: pointer;
+    transition: transform 0.2s ease, opacity 0.2s;
+    padding: 4px 8px;
+    border-radius: 50%;
+    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-favorite:hover {
+    transform: scale(1.2);
+}
+
+.btn-favorite:active {
+    transform: scale(0.9);
+}
+
+.btn-favorite i {
+    color: #D1D5DB;
+    transition: color 0.3s ease;
+}
+
+.btn-favorite i.active {
+    color: #EF4444;
+}
+
+.btn-favorite i.active:hover {
+    color: #DC2626;
 }
 
 .product-rating-large {
@@ -512,6 +560,10 @@
         width: 100%;
         justify-content: center;
     }
+    
+    .btn-favorite {
+        font-size: 1.6rem;
+    }
 }
 </style>
 
@@ -560,7 +612,7 @@
                 price: price,
                 image: image,
                 quantity: 1,
-                store_id: storeId || '{{ product.store_id }}'  // ✅ GUARDAR store_id
+                store_id: storeId || '{{ product.store_id }}'
             });
         }
         
@@ -592,7 +644,85 @@
     }
     
     // ============================================
-    // FUNCIONES EXISTENTES (modificadas)
+    // FUNCIONES DE FAVORITOS (NUEVO)
+    // ============================================
+    
+    // Alternar favorito
+    function toggleFavorite(productId) {
+        const icon = document.getElementById('favoriteIcon');
+        const isFavorite = icon.classList.contains('active');
+        
+        // Si no está autenticado, redirigir al login
+        {% if not current_user.is_authenticated %}
+            showNotification('⚠️ Inicia sesión para guardar favoritos', 'warning');
+            setTimeout(() => {
+                window.location.href = "{{ url_for('auth.login') }}?next={{ request.path }}";
+            }, 1500);
+            return;
+        {% endif %}
+        
+        // Cambiar visualmente mientras se procesa
+        icon.style.opacity = '0.5';
+        
+        fetch('/api/favorites', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('meta[name="csrf-token"]')?.content || ''
+            },
+            body: JSON.stringify({ product_id: productId })
+        })
+        .then(res => res.json())
+        .then(data => {
+            icon.style.opacity = '1';
+            
+            if (data.success) {
+                if (data.action === 'added') {
+                    icon.classList.add('active');
+                    icon.style.color = '#EF4444';
+                    showNotification('❤️ Agregado a favoritos');
+                } else {
+                    icon.classList.remove('active');
+                    icon.style.color = '#D1D5DB';
+                    showNotification('💔 Eliminado de favoritos');
+                }
+            } else {
+                showNotification('❌ Error: ' + (data.error || 'No se pudo procesar'), 'error');
+            }
+        })
+        .catch(error => {
+            icon.style.opacity = '1';
+            console.error('Error:', error);
+            showNotification('❌ Error de conexión', 'error');
+        });
+    }
+    
+    // Verificar estado del favorito al cargar la página
+    function checkFavoriteStatus() {
+        const productId = '{{ product.id }}';
+        const icon = document.getElementById('favoriteIcon');
+        
+        {% if current_user.is_authenticated %}
+            fetch(`/api/favorites/check/${productId}`, {
+                headers: {
+                    'X-CSRFToken': document.querySelector('meta[name="csrf-token"]')?.content || ''
+                }
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.is_favorite) {
+                    icon.classList.add('active');
+                    icon.style.color = '#EF4444';
+                }
+            })
+            .catch(error => {
+                console.error('Error verificando favorito:', error);
+            });
+        {% endif %}
+    }
+    
+    // ============================================
+    // FUNCIONES EXISTENTES
     // ============================================
     
     // Cambiar imagen principal
@@ -610,22 +740,22 @@
         input.value = value;
     }
     
-    // ✅ CORREGIDO: Pasar store_id
+    // Agregar al carrito desde el detalle
     function addToCartFromDetail() {
         const quantity = parseInt(document.getElementById('quantity').value);
         const productId = '{{ product.id }}';
         const name = '{{ product.name }}';
         const price = {{ product.get_price_with_discount() }};
         const image = '{{ product.image_url }}';
-        const storeId = '{{ product.store_id }}';  // ✅ OBTENER store_id
+        const storeId = '{{ product.store_id }}';
         
         for (let i = 0; i < quantity; i++) {
-            addToCart(productId, name, price, image, storeId);  // ✅ PASAR store_id
+            addToCart(productId, name, price, image, storeId);
         }
     }
     
     // ============================================
-    // RESEÑAS (sin cambios)
+    // RESEÑAS
     // ============================================
     
     // Cargar reseñas
@@ -701,6 +831,7 @@
     document.addEventListener('DOMContentLoaded', function() {
         loadReviews();
         updateCartBadge();
+        checkFavoriteStatus();
     });
 </script>
 {% endblock %}
