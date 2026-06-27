@@ -28,13 +28,10 @@
                 <i class="fas fa-shopping-bag"></i> Pedidos
                 <span class="badge">{{ total_orders }}</span>
             </a>
-            <a href="{{ url_for('favorite.list') }}" class="nav-item">
-                <i class="fas fa-heart"></i> Favoritos
-                <span class="badge">0</span>
-            </a>
+            <!-- ✅ Notificaciones con contador dinámico -->
             <a href="{{ url_for('notification.list') }}" class="nav-item">
                 <i class="fas fa-bell"></i> Notificaciones
-                <span class="badge">0</span>
+                <span class="badge" id="notificationBadge">0</span>
             </a>
             <a href="{{ url_for('store.edit_store') }}" class="nav-item">
                 <i class="fas fa-cog"></i> Configuración
@@ -177,19 +174,6 @@
                 </a>
             </div>
         </section>
-        
-        <!-- Reviews Section -->
-         <!-- ✅ SECCIÓN DE FAVORITOS (UNIFICADA) -->
-        <section id="favorites" class="content-section">
-            <h2>❤️ Mis Favoritos</h2>
-            <div style="text-align: center; padding: 30px 20px; background: #F8FAFC; border-radius: 12px;">
-                <i class="fas fa-heart" style="font-size: 2.5rem; color: #EF4444; margin-bottom: 12px;"></i>
-                <p style="color: #64748B; max-width: 400px; margin: 0 auto 12px;">Administra tus productos favoritos</p>
-                <a href="{{ url_for('favorite.list') }}" class="btn-primary" style="display: inline-block; padding: 10px 24px; background: #EF4444;">
-                    <i class="fas fa-arrow-right"></i> Ver Favoritos
-                </a>
-            </div>
-        </section>
     </main>
 </div>
 
@@ -294,7 +278,31 @@
         setupImagePreview();
         setupSidebarNavigation();
         setupModalClose();
+        updateNotificationBadge();
+        
+        // Actualizar badge de notificaciones cada 30 segundos
+        setInterval(updateNotificationBadge, 30000);
     });
+    
+    // ============================================
+    // CONTADOR DE NOTIFICACIONES
+    // ============================================
+    function updateNotificationBadge() {
+        const badge = document.getElementById('notificationBadge');
+        if (!badge) return;
+        
+        fetch('/api/notifications/unread')
+            .then(res => res.json())
+            .then(data => {
+                if (data.count !== undefined) {
+                    badge.textContent = data.count;
+                    badge.style.display = data.count > 0 ? 'inline-block' : 'none';
+                }
+            })
+            .catch(error => {
+                console.error('Error al obtener notificaciones:', error);
+            });
+    }
     
     // ============================================
     // PREVISUALIZACIÓN DE IMAGEN
