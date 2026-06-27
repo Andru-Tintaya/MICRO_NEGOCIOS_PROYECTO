@@ -25,6 +25,13 @@ def create_app(config_class=None):
     csrf.init_app(app)
     mail.init_app(app)
     
+    # ✅ FORZAR INICIALIZACIÓN DE LA SESIÓN PARA CSRF
+    @app.before_request
+    def ensure_csrf_token():
+        from flask import session
+        if not session.get('_csrf_token'):
+            session['_csrf_token'] = 'initialized'
+    
     @app.errorhandler(CSRFError)
     def handle_csrf_error(e):
         flash('El token de seguridad ha expirado. Por favor, recarga la página.', 'error')
@@ -58,22 +65,17 @@ def create_app(config_class=None):
     def load_user(user_id):
         return User.query.get(user_id)
     
-    # ============================================
-    # ✅ RUTA PRINCIPAL CORREGIDA
-    # ============================================
     @app.route('/')
     def index():
         from app.models.product import Product
         from app.models.category import Category
         from app.models.store import Store
         
-        # ✅ Obtener productos destacados (activos y con flag is_featured)
         featured_products = Product.query.filter_by(
             is_active=True, 
             is_featured=True
         ).limit(8).all()
         
-        # ✅ Si no hay destacados, mostrar los más recientes
         if not featured_products:
             featured_products = Product.query.filter_by(
                 is_active=True
