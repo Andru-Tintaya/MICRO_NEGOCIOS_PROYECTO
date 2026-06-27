@@ -1,0 +1,216 @@
+{% extends "base.html" %}
+{% block title %}Mi Carrito - MiZona{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1 class="mb-4">🛒 Mi Carrito</h1>
+    
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <div id="cartItems">
+                        <p class="text-center text-muted py-5">Cargando carrito...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-4">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <h5 class="card-title">Resumen del Pedido</h5>
+                    <hr>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Subtotal:</span>
+                        <span id="subtotal">Bs 0.00</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-3">
+                        <span>Total:</span>
+                        <strong id="total" style="color: #10B981;">Bs 0.00</strong>
+                    </div>
+                    <button class="btn btn-success w-100" onclick="checkout()">
+                        <i class="fas fa-check me-2"></i> Finalizar Compra
+                    </button>
+                    <button class="btn btn-outline-danger w-100 mt-2" onclick="clearCart()">
+                        <i class="fas fa-trash me-2"></i> Vaciar Carrito
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Obtener el carrito del localStorage
+function getCart() {
+    try {
+        return JSON.parse(localStorage.getItem('shopping_cart')) || [];
+    } catch {
+        return [];
+    }
+}
+
+// Guardar el carrito
+function saveCart(cart) {
+    localStorage.setItem('shopping_cart', JSON.stringify(cart));
+}
+
+// Actualizar el badge
+function updateCartBadge() {
+    const cart = getCart();
+    const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
+    const badge = document.getElementById('cartBadge');
+    if (badge) {
+        badge.textContent = totalItems;
+        badge.style.display = totalItems > 0 ? 'inline-block' : 'none';
+    }
+}
+
+// Mostrar el carrito
+function renderCart() {
+    const cart = getCart();
+    const container = document.getElementById('cartItems');
+    
+    if (cart.length === 0) {
+        container.innerHTML = `
+            <div class="text-center py-5">
+                <i class="fas fa-shopping-cart" style="font-size: 3rem; color: #94A3B8;"></i>
+                <h4 class="mt-3 text-muted">Tu carrito está vacío</h4>
+                <a href="{{ url_for('product.list') }}" class="btn btn-primary mt-3" style="background: #10B981; border: none;">
+                    <i class="fas fa-search me-2"></i> Explorar Productos
+                </a>
+            </div>
+        `;
+        document.getElementById('subtotal').textContent = 'Bs 0.00';
+        document.getElementById('total').textContent = 'Bs 0.00';
+        return;
+    }
+    
+    container.innerHTML = cart.map(item => `
+        <div class="d-flex align-items-center py-3 border-bottom">
+            <div class="flex-grow-1">
+                <h6 class="mb-1">${item.name}</h6>
+                <span class="text-muted">Bs ${item.price.toFixed(2)}</span>
+            </div>
+            <div class="d-flex align-items-center gap-3">
+                <button class="btn btn-sm btn-outline-secondary" onclick="updateQuantity('${item.id}', -1)">-</button>
+                <span class="fw-bold">${item.quantity}</span>
+                <button class="btn btn-sm btn-outline-secondary" onclick="updateQuantity('${item.id}', 1)">+</button>
+                <button class="btn btn-sm btn-danger" onclick="removeItem('${item.id}')">&times;</button>
+            </div>
+        </div>
+    `).join('');
+    
+    const total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    document.getElementById('subtotal').textContent = `Bs ${total.toFixed(2)}`;
+    document.getElementById('total').textContent = `Bs ${total.toFixed(2)}`;
+}
+
+function updateQuantity(productId, delta) {
+    let cart = getCart();
+    const item = cart.find(i => i.id === productId);
+    if (item) {
+        item.quantity += delta;
+        if (item.quantity <= 0) {
+            cart = cart.filter(i => i.id !== productId);
+        }
+        saveCart(cart);
+        renderCart();
+        updateCartBadge();
+    }
+}
+
+function removeItem(productId) {
+    let cart = getCart();
+    cart = cart.filter(i => i.id !== productId);
+    saveCart(cart);
+    renderCart();
+    updateCartBadge();
+}
+
+function clearCart() {
+    if (confirm('¿Vaciar el carrito?')) {
+        saveCart([]);
+        renderCart();
+        updateCartBadge();
+    }
+}
+
+function checkout() {
+    const cart = getCart();
+    if (cart.length === 0) {
+        alert('El carrito está vacío');
+        return;
+    }
+    
+    // ✅ OBTENER store_id DEL PRIMER PRODUCTO
+    const storeId = cart[0].store_id;
+    
+    if (!storeId) {
+        alert('❌ Error: No se puede identificar la tienda.\n\nPor favor, elimina los productos del carrito y vuelve a agregarlos desde la página de la tienda.');
+        return;
+    }
+    
+    // ✅ VERIFICAR QUE TODOS LOS PRODUCTOS SEAN DE LA MISMA TIENDA
+    const differentStore = cart.some(item => item.store_id !== storeId);
+    if (differentStore) {
+        alert('❌ Error: No puedes comprar productos de diferentes tiendas en el mismo pedido.\n\nPor favor, compra por separado.');
+        return;
+    }
+    
+    const data = {
+        store_id: storeId,
+        items: cart.map(item => ({
+            product_id: item.id,
+            quantity: item.quantity,
+            price: item.price
+        })),
+        shipping_address: document.getElementById('shipping_address')?.value || 'Calle Principal 123',
+        shipping_city: document.getElementById('shipping_city')?.value || 'El Alto',
+        notes: document.getElementById('notes')?.value || ''
+    };
+    
+    console.log('📤 Enviando a:', '/orders/create');
+    console.log('📦 Datos:', data);
+    
+    fetch('/orders/create', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('meta[name="csrf-token"]')?.content || ''
+        },
+        body: JSON.stringify(data)
+    })
+    .then(res => {
+        console.log('📥 Status:', res.status);
+        if (!res.ok) {
+            return res.text().then(text => {
+                throw new Error(`Error ${res.status}: ${text}`);
+            });
+        }
+        return res.json();
+    })
+    .then(data => {
+        console.log('📥 Respuesta:', data);
+        if (data.success) {
+            localStorage.removeItem('shopping_cart');
+            alert('✅ ¡Pedido creado exitosamente!');
+            window.location.href = '/orders';
+        } else {
+            alert('❌ Error: ' + (data.error || 'Desconocido'));
+        }
+    })
+    .catch(error => {
+        console.error('❌ Error:', error);
+        alert('❌ Error: ' + error.message);
+    });
+}
+
+// Inicializar
+document.addEventListener('DOMContentLoaded', function() {
+    renderCart();
+    updateCartBadge();
+});
+</script>
+{% endblock %}

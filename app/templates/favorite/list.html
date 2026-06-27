@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+
+{% block title %}Mis Favoritos - MiZona{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="section-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
+        <h1 style="font-size: 1.8rem; font-weight: 800; color: #1E293B;">
+            <i class="fas fa-heart" style="color: #EF4444;"></i> Mis Favoritos
+        </h1>
+        <a href="{{ url_for('product.list') }}" class="btn btn-primary" style="background: #10B981; border: none; padding: 10px 20px; border-radius: 8px; color: white; font-weight: 600; text-decoration: none;">
+            <i class="fas fa-search"></i> Explorar Productos
+        </a>
+    </div>
+
+    {% if products %}
+        <div class="products-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 30px;">
+            {% for product in products %}
+            <div class="product-card" style="background: white; border: 1px solid #E2E8F0; border-radius: 12px; overflow: hidden; transition: all 0.3s;">
+                <a href="{{ url_for('product.detail', slug=product.slug) }}" style="text-decoration: none; color: inherit;">
+                    <div class="product-image" style="position: relative; width: 100%; height: 220px; overflow: hidden; background: #F8FAFC;">
+                        <img src="{{ product.image_url if product.image_url else 'https://via.placeholder.com/300x300?text=Sin+Imagen' }}" 
+                             alt="{{ product.name }}" loading="lazy" style="width: 100%; height: 100%; object-fit: cover; transition: transform 0.3s;">
+                        {% if product.discount_price %}
+                        <span class="discount-badge" style="position: absolute; top: 12px; left: 12px; background: #EF4444; color: white; padding: 4px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: 700;">-{{ product.get_discount_percentage() }}%</span>
+                        {% endif %}
+                        {% if not product.is_in_stock() %}
+                        <span class="out-of-stock" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0,0,0,0.7); color: white; padding: 8px 16px; border-radius: 8px; font-weight: 700;">Agotado</span>
+                        {% endif %}
+                        <!-- Corazón de favorito -->
+                        <span style="position: absolute; top: 12px; right: 12px; background: white; border-radius: 50%; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                            <i class="fas fa-heart" style="color: #EF4444;"></i>
+                        </span>
+                    </div>
+                    <div class="product-info" style="padding: 16px;">
+                        <h3 style="font-size: 1rem; font-weight: 600; color: #1E293B; margin-bottom: 6px;">{{ product.name }}</h3>
+                        <div class="product-meta" style="display: flex; justify-content: space-between; align-items: center; font-size: 0.85rem; color: #64748B; margin-bottom: 8px;">
+                            <span class="product-store">{{ product.store.name }}</span>
+                            <div class="product-rating" style="display: flex; align-items: center; gap: 4px;">
+                                <i class="fas fa-star" style="color: #F59E0B;"></i>
+                                <span>{{ "%.1f"|format(product.rating_avg) if product.rating_avg else 0 }}</span>
+                                <span>({{ product.rating_count }})</span>
+                            </div>
+                        </div>
+                        <div class="product-pricing" style="display: flex; align-items: center; gap: 10px; margin-bottom: 12px;">
+                            {% if product.discount_price %}
+                            <span class="price original" style="font-size: 0.9rem; color: #94A3B8; text-decoration: line-through; font-weight: 400;">Bs {{ "%.2f"|format(product.price) }}</span>
+                            <span class="price discounted" style="font-size: 1.2rem; font-weight: 700; color: #EF4444;">Bs {{ "%.2f"|format(product.discount_price) }}</span>
+                            {% else %}
+                            <span class="price" style="font-size: 1.2rem; font-weight: 700; color: #1E293B;">Bs {{ "%.2f"|format(product.price) }}</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </a>
+                <button onclick="removeFavorite('{{ product.id }}')" style="width: 100%; padding: 10px; background: #FEE2E2; color: #EF4444; border: none; font-weight: 600; cursor: pointer; transition: background 0.3s; border-radius: 0 0 12px 12px;">
+                    <i class="fas fa-trash me-1"></i> Quitar de Favoritos
+                </button>
+            </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="empty-state" style="text-align: center; padding: 60px 20px; background: white; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+            <i class="fas fa-heart" style="font-size: 3rem; color: #94A3B8;"></i>
+            <h3 style="font-size: 1.2rem; color: #1E293B; margin-top: 16px;">No tienes productos favoritos</h3>
+            <p style="color: #64748B; margin-bottom: 20px;">Explora productos y agrega tus favoritos</p>
+            <a href="{{ url_for('product.list') }}" class="btn-primary" style="display: inline-block; padding: 10px 24px; background: #10B981; color: white; border: none; border-radius: 8px; text-decoration: none; font-weight: 600; transition: all 0.3s;">
+                <i class="fas fa-search"></i> Ver Productos
+            </a>
+        </div>
+    {% endif %}
+</div>
+
+<script>
+function removeFavorite(productId) {
+    if (confirm('¿Quitar este producto de favoritos?')) {
+        fetch('/api/favorites/toggle', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('meta[name="csrf-token"]')?.content || ''
+            },
+            body: JSON.stringify({ product_id: productId })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+        });
+    }
+}
+</script>
+{% endblock %}

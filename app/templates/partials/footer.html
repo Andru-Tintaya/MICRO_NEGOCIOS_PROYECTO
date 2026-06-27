@@ -1,49 +1,160 @@
-<footer class="footer mt-auto py-4" style="background: #1E293B; color: #F8FAFC;">
+<footer class="footer">
     <div class="container">
-        <div class="row">
-            <div class="col-md-4 mb-3">
-                <h5 class="text-success"><i class="fas fa-store-alt me-2"></i>MiZona</h5>
-                <p class="text-secondary">Plataforma de Marketplace Local para emprendedores y microempresas.</p>
-                <div>
-                    <a href="#" class="text-secondary me-2"><i class="fab fa-facebook"></i></a>
-                    <a href="#" class="text-secondary me-2"><i class="fab fa-instagram"></i></a>
-                    <a href="#" class="text-secondary me-2"><i class="fab fa-twitter"></i></a>
-                    <a href="#" class="text-secondary"><i class="fab fa-youtube"></i></a>
+        <div class="footer-grid">
+            <div class="footer-brand">
+                <h2><i class="fas fa-store-alt"></i> MiZona</h2>
+                <p>Plataforma de Marketplace Local para emprendedores y microempresas.</p>
+                <div class="footer-social">
+                    <a href="#"><i class="fab fa-facebook"></i></a>
+                    <a href="#"><i class="fab fa-instagram"></i></a>
+                    <a href="#"><i class="fab fa-twitter"></i></a>
+                    <a href="#"><i class="fab fa-youtube"></i></a>
                 </div>
             </div>
             
-            <div class="col-md-2 mb-3">
-                <h6 class="text-white">Enlaces</h6>
-                <ul class="list-unstyled">
-                    <li><a href="{{ url_for('index') }}" class="text-secondary text-decoration-none">Inicio</a></li>
-                    <li><a href="{{ url_for('product.list') }}" class="text-secondary text-decoration-none">Productos</a></li>
+            <div class="footer-links">
+                <h3>Enlaces</h3>
+                <ul>
+                    <li><a href="{{ url_for('index') }}">Inicio</a></li>
+                    <li><a href="{{ url_for('product.list') }}">Productos</a></li>
                     {% if current_user.is_authenticated %}
-                        <li><a href="{{ url_for('store.dashboard') }}" class="text-secondary text-decoration-none">Mi Tienda</a></li>
+                        <li><a href="{{ url_for('store.dashboard') }}">Mi Tienda</a></li>
+                        <li><a href="{{ url_for('favorite.list') }}">Favoritos</a></li>
+                    {% else %}
+                        <li><a href="{{ url_for('auth.register') }}">Registrarse</a></li>
+                        <li><a href="{{ url_for('auth.login') }}">Iniciar Sesión</a></li>
                     {% endif %}
                 </ul>
             </div>
             
-            <div class="col-md-3 mb-3">
-                <h6 class="text-white">Ayuda</h6>
-                <ul class="list-unstyled">
-                    <li><a href="#" class="text-secondary text-decoration-none">Términos y Condiciones</a></li>
-                    <li><a href="#" class="text-secondary text-decoration-none">Política de Privacidad</a></li>
-                    <li><a href="#" class="text-secondary text-decoration-none">Preguntas Frecuentes</a></li>
+            <div class="footer-links">
+                <h3>Ayuda</h3>
+                <ul>
+                    <li><a href="#">Términos y Condiciones</a></li>
+                    <li><a href="#">Política de Privacidad</a></li>
+                    <li><a href="#">Preguntas Frecuentes</a></li>
+                    <li><a href="#">Contacto</a></li>
                 </ul>
             </div>
             
-            <div class="col-md-3 mb-3">
-                <h6 class="text-white">Contacto</h6>
-                <p class="text-secondary"><i class="fas fa-envelope me-2"></i>soporte@mizona.com</p>
-                <p class="text-secondary"><i class="fab fa-whatsapp me-2"></i>+591 70000000</p>
-                <p class="text-secondary"><i class="fas fa-map-marker-alt me-2"></i>El Alto, Bolivia</p>
+            <div class="footer-contact">
+                <h3>Contacto</h3>
+                <p><i class="fas fa-envelope"></i> soporte@mizona.com</p>
+                <p><i class="fab fa-whatsapp"></i> +591 70000000</p>
+                <p><i class="fas fa-map-marker-alt"></i> El Alto, Bolivia</p>
             </div>
         </div>
         
-        <hr class="border-secondary">
-        
-        <div class="text-center text-secondary">
-            <small>&copy; 2026 MiZona - Todos los derechos reservados</small>
+        <div class="footer-bottom">
+            <p>&copy; 2026 MiZona - Todos los derechos reservados</p>
+            <p>Desarrollado con ❤️ para emprendedores</p>
         </div>
     </div>
 </footer>
+
+<style>
+.footer {
+    background: #1E293B;
+    color: #F8FAFC;
+    padding: 60px 0 20px;
+    margin-top: 60px;
+}
+
+.footer-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr 1.5fr;
+    gap: 40px;
+    margin-bottom: 40px;
+}
+
+.footer-brand h2 {
+    font-size: 1.5rem;
+    margin-bottom: 12px;
+    color: #10B981;
+}
+
+.footer-brand p {
+    color: #94A3B8;
+    line-height: 1.6;
+}
+
+.footer-social {
+    display: flex;
+    gap: 12px;
+    margin-top: 16px;
+}
+
+.footer-social a {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    background: #334155;
+    border-radius: 50%;
+    color: #F8FAFC;
+    transition: all 0.3s;
+}
+
+.footer-social a:hover {
+    background: #10B981;
+    transform: translateY(-3px);
+}
+
+.footer-links h3 {
+    font-size: 1rem;
+    margin-bottom: 16px;
+    color: #F8FAFC;
+}
+
+.footer-links ul {
+    list-style: none;
+    padding: 0;
+}
+
+.footer-links ul li {
+    margin-bottom: 10px;
+}
+
+.footer-links ul li a {
+    color: #94A3B8;
+    text-decoration: none;
+    transition: color 0.3s;
+}
+
+.footer-links ul li a:hover {
+    color: #10B981;
+}
+
+.footer-contact p {
+    color: #94A3B8;
+    margin-bottom: 10px;
+}
+
+.footer-contact p i {
+    color: #10B981;
+    width: 24px;
+}
+
+.footer-bottom {
+    border-top: 1px solid #334155;
+    padding-top: 20px;
+    display: flex;
+    justify-content: space-between;
+    color: #64748B;
+    font-size: 0.9rem;
+}
+
+@media (max-width: 768px) {
+    .footer-grid {
+        grid-template-columns: 1fr;
+        gap: 30px;
+    }
+    
+    .footer-bottom {
+        flex-direction: column;
+        text-align: center;
+        gap: 8px;
+    }
+}
+</style>

@@ -60,7 +60,7 @@
                 </div>
             </a>
             {% if product.is_in_stock() %}
-            <button class="btn-add-cart" onclick="addToCart('{{ product.id }}', '{{ product.name }}', {{ product.get_price_with_discount() }})">
+            <button class="btn-add-cart" onclick="addToCart('{{ product.id }}', '{{ product.name }}', {{ product.get_price_with_discount() }}, '{{ product.image_url }}', '{{ product.store_id }}')">
                 <i class="fas fa-shopping-cart"></i> Agregar
             </button>
             {% endif %}
@@ -156,39 +156,114 @@
 </style>
 
 <script>
-function filterProducts() {
-    const search = document.getElementById('searchInput').value.toLowerCase();
-    const sort = document.getElementById('sortSelect').value;
-    const grid = document.getElementById('productsGrid');
-    const cards = Array.from(grid.querySelectorAll('.product-card'));
+    // ============================================
+    // FUNCIONES DEL CARRITO (GLOBALES)
+    // ============================================
     
-    // Filtrar
-    cards.forEach(card => {
-        const text = card.textContent.toLowerCase();
-        card.style.display = text.includes(search) ? '' : 'none';
-    });
-    
-    // Ordenar
-    const visible = cards.filter(c => c.style.display !== 'none');
-    visible.sort((a, b) => {
-        if (sort === 'price_low') {
-            return parseFloat(a.dataset.price) - parseFloat(b.dataset.price);
-        } else if (sort === 'price_high') {
-            return parseFloat(b.dataset.price) - parseFloat(a.dataset.price);
-        } else if (sort === 'rating') {
-            return parseFloat(b.dataset.rating) - parseFloat(a.dataset.rating);
-        } else if (sort === 'popular') {
-            return parseInt(b.dataset.sold) - parseInt(a.dataset.sold);
-        } else {
-            return new Date(b.dataset.created) - new Date(a.dataset.created);
+    function getCart() {
+        try {
+            return JSON.parse(localStorage.getItem('shopping_cart')) || [];
+        } catch {
+            return [];
         }
-    });
+    }
     
-    visible.forEach(card => grid.appendChild(card));
+    function saveCart(cart) {
+        localStorage.setItem('shopping_cart', JSON.stringify(cart));
+        updateCartBadge();
+    }
+    
+    function updateCartBadge() {
+        const cart = getCart();
+        const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
+        const badge = document.getElementById('cartBadge');
+        if (badge) {
+            badge.textContent = totalItems;
+            badge.style.display = totalItems > 0 ? 'inline-block' : 'none';
+        }
+    }
+    
+// ✅ CORREGIDO: Recibir storeId
+function addToCart(productId, name, price, image = null, storeId = null) {
+    const cart = getCart();
+    const existing = cart.find(item => item.id === productId);
+    
+    if (existing) {
+        existing.quantity += 1;
+    } else {
+        cart.push({
+            id: productId,
+            name: name,
+            price: price,
+            image: image,
+            quantity: 1,
+            store_id: storeId  // ✅ GUARDAR store_id
+        });
+    }
+    
+    saveCart(cart);
+    showNotification(`✅ ${name} agregado al carrito`);
+    updateCartBadge();
 }
-
-function addToCart(productId, name, price) {
-    alert(`🛒 ${name} agregado al carrito (Bs ${price.toFixed(2)})`);
-}
-</script>
+    
+    function showNotification(message, type = 'success') {
+        const div = document.createElement('div');
+        div.className = `flash-message flash-${type}`;
+        div.textContent = message;
+        div.style.cssText = `
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 99999;
+            max-width: 350px;
+            padding: 12px 20px;
+            border-radius: 8px;
+            background: ${type === 'success' ? '#D1FAE5' : '#FEE2E2'};
+            color: ${type === 'success' ? '#065F46' : '#991B1B'};
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            animation: slideInRight 0.3s ease;
+        `;
+        document.body.appendChild(div);
+        setTimeout(() => { div.remove(); }, 3000);
+    }
+    
+    // ============================================
+    // FILTROS DE PRODUCTOS
+    // ============================================
+    function filterProducts() {
+        const search = document.getElementById('searchInput').value.toLowerCase();
+        const sort = document.getElementById('sortSelect').value;
+        const grid = document.getElementById('productsGrid');
+        const cards = Array.from(grid.querySelectorAll('.product-card'));
+        
+        cards.forEach(card => {
+            const text = card.textContent.toLowerCase();
+            card.style.display = text.includes(search) ? '' : 'none';
+        });
+        
+        const visible = cards.filter(c => c.style.display !== 'none');
+        visible.sort((a, b) => {
+            if (sort === 'price_low') {
+                return parseFloat(a.dataset.price) - parseFloat(b.dataset.price);
+            } else if (sort === 'price_high') {
+                return parseFloat(b.dataset.price) - parseFloat(a.dataset.price);
+            } else if (sort === 'rating') {
+                return parseFloat(b.dataset.rating) - parseFloat(a.dataset.rating);
+            } else if (sort === 'popular') {
+                return parseInt(b.dataset.sold) - parseInt(a.dataset.sold);
+            } else {
+                return new Date(b.dataset.created) - new Date(a.dataset.created);
+            }
+        });
+        
+        visible.forEach(card => grid.appendChild(card));
+    }
+    
+    // ============================================
+    // INICIALIZAR
+    // ============================================
+    document.addEventListener('DOMContentLoaded', function() {
+        updateCartBadge();
+    });
+    </script>
 {% endblock %}

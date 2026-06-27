@@ -28,6 +28,12 @@ def list():
     
     return render_template('order/list.html', orders=orders)
 
+@order_bp.route('/cart', methods=['GET'])
+@login_required
+def view_cart():
+    """Ver el carrito de compras"""
+    return render_template('order/cart.html')
+
 @order_bp.route('/<order_id>')
 @login_required
 def detail(order_id):
@@ -109,13 +115,10 @@ def create():
             )
             db.session.add(notification)
             db.session.commit()
-            
-            # Enviar email/WhatsApp (implementar)
-            send_order_notification(store.user_id, order)
         
         return jsonify({
             'success': True,
-            'order': order.to_dict()
+            'data': order.to_dict()
         }), 201
         
     except Exception as e:

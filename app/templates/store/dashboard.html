@@ -60,8 +60,8 @@
         <!-- Stats Cards -->
         <div class="stats-grid">
             <div class="stat-card">
-                <div class="stat-icon" style="background: #ECFDF5;">
-                    <i class="fas fa-box" style="color: #10B981;"></i>
+                <div class="stat-icon" style="background: #E8F5E9;">
+                    <i class="fas fa-box" style="color: #2E7D32;"></i>
                 </div>
                 <div class="stat-info">
                     <h3>{{ products|length }}</h3>
@@ -69,8 +69,8 @@
                 </div>
             </div>
             <div class="stat-card">
-                <div class="stat-icon" style="background: #EFF6FF;">
-                    <i class="fas fa-shopping-bag" style="color: #3B82F6;"></i>
+                <div class="stat-icon" style="background: #E3F2FD;">
+                    <i class="fas fa-shopping-bag" style="color: #1565C0;"></i>
                 </div>
                 <div class="stat-info">
                     <h3>0</h3>
@@ -78,8 +78,8 @@
                 </div>
             </div>
             <div class="stat-card">
-                <div class="stat-icon" style="background: #FEF3C7;">
-                    <i class="fas fa-star" style="color: #F59E0B;"></i>
+                <div class="stat-icon" style="background: #FFF8E1;">
+                    <i class="fas fa-star" style="color: #F57F17;"></i>
                 </div>
                 <div class="stat-info">
                     <h3>{{ "%.1f"|format(store.rating_avg) if store.rating_avg else 0 }}</h3>
@@ -87,8 +87,8 @@
                 </div>
             </div>
             <div class="stat-card">
-                <div class="stat-icon" style="background: #FEE2E2;">
-                    <i class="fas fa-users" style="color: #EF4444;"></i>
+                <div class="stat-icon" style="background: #FCE4EC;">
+                    <i class="fas fa-users" style="color: #C62828;"></i>
                 </div>
                 <div class="stat-info">
                     <h3>{{ store.followers_count }}</h3>
@@ -123,7 +123,7 @@
                 {% for product in products %}
                 <div class="product-card">
                     <div class="product-image">
-                        <img src="{{ product.image_url or 'https://via.placeholder.com/300x300?text=Sin+Imagen' }}" 
+                        <img src="{{ product.image_url if product.image_url else 'https://via.placeholder.com/300x300?text=Sin+Imagen' }}" 
                              alt="{{ product.name }}" loading="lazy">
                         {% if not product.is_active %}
                         <span class="inactive-badge">Inactivo</span>
@@ -219,38 +219,39 @@
             <span class="close" onclick="closeProductModal()">&times;</span>
         </div>
         <form id="productForm" enctype="multipart/form-data">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <input type="hidden" id="productId">
             
             <div class="form-group">
                 <label>Nombre del Producto *</label>
-                <input type="text" id="productName" required>
+                <input type="text" id="productName" class="form-control" required>
             </div>
             
             <div class="form-row">
                 <div class="form-group">
                     <label>Precio (Bs) *</label>
-                    <input type="number" id="productPrice" step="0.01" required>
+                    <input type="number" id="productPrice" class="form-control" step="0.01" required>
                 </div>
                 <div class="form-group">
                     <label>Precio con Descuento</label>
-                    <input type="number" id="productDiscount" step="0.01">
+                    <input type="number" id="productDiscount" class="form-control" step="0.01">
                 </div>
             </div>
             
             <div class="form-row">
                 <div class="form-group">
                     <label>Stock *</label>
-                    <input type="number" id="productStock" required>
+                    <input type="number" id="productStock" class="form-control" required>
                 </div>
                 <div class="form-group">
                     <label>Stock Mínimo</label>
-                    <input type="number" id="productMinStock">
+                    <input type="number" id="productMinStock" class="form-control">
                 </div>
             </div>
             
             <div class="form-group">
                 <label>Categoría</label>
-                <select id="productCategory">
+                <select id="productCategory" class="form-control">
                     <option value="">Sin categoría</option>
                     {% for category in categories %}
                     <option value="{{ category.id }}">{{ category.name }}</option>
@@ -260,7 +261,7 @@
             
             <div class="form-group">
                 <label>Descripción</label>
-                <textarea id="productDesc" rows="3"></textarea>
+                <textarea id="productDesc" class="form-control" rows="3"></textarea>
             </div>
             
             <div class="form-group">
@@ -269,7 +270,7 @@
                     <i class="fas fa-cloud-upload-alt"></i>
                     <p>Haz clic o arrastra una imagen aquí</p>
                     <input type="file" id="productImage" accept="image/*">
-                    <img id="imagePreview" style="display: none;">
+                    <img id="imagePreview" style="display: none; max-width: 200px; margin-top: 10px; border-radius: 8px;">
                 </div>
             </div>
             
@@ -279,9 +280,6 @@
                 </label>
             </div>
             
-            <!-- ============================================ -->
-            <!-- ✅ CAMPO AGREGADO: Producto Activo            -->
-            <!-- ============================================ -->
             <div class="form-group checkbox">
                 <label>
                     <input type="checkbox" id="productActive" checked> Producto Activo
@@ -323,7 +321,6 @@
         document.getElementById('modalTitle').textContent = 'Editar Producto';
         document.getElementById('productModal').style.display = 'block';
         
-        // Cargar datos del producto - USANDO LA RUTA CORRECTA
         fetch(`/api/products/${productId}`)
             .then(res => res.json())
             .then(data => {
@@ -339,7 +336,6 @@
                     document.getElementById('productFeatured').checked = p.is_featured || false;
                     document.getElementById('productActive').checked = p.is_active !== false;
                     
-                    // Mostrar imagen existente
                     if (p.image_url) {
                         const preview = document.getElementById('imagePreview');
                         preview.src = p.image_url;
@@ -394,8 +390,6 @@
     document.getElementById('productForm')?.addEventListener('submit', async function(e) {
         e.preventDefault();
         
-        console.log('📤 Enviando formulario...');
-        
         const formData = new FormData();
         formData.append('name', document.getElementById('productName').value);
         formData.append('price', document.getElementById('productPrice').value);
@@ -410,13 +404,10 @@
         const fileInput = document.getElementById('productImage');
         if (fileInput.files && fileInput.files[0]) {
             formData.append('image', fileInput.files[0]);
-            console.log('📷 Imagen seleccionada:', fileInput.files[0].name);
         }
         
         const url = editProductId ? `/api/products/${editProductId}` : '/api/products';
         const method = editProductId ? 'PUT' : 'POST';
-        
-        console.log(`📤 ${method} ${url}`);
         
         try {
             const response = await fetch(url, {
@@ -428,7 +419,6 @@
             });
             
             const result = await response.json();
-            console.log('📥 Respuesta:', result);
             
             if (result.success) {
                 alert('✅ Producto guardado con éxito');
@@ -464,7 +454,6 @@
     document.querySelectorAll('.nav-item[data-section]').forEach(item => {
         item.addEventListener('click', function(e) {
             e.preventDefault();
-            // Remover active de todos
             document.querySelectorAll('.nav-item[data-section]').forEach(n => n.classList.remove('active'));
             document.querySelectorAll('.content-section').forEach(s => s.classList.remove('active'));
             
@@ -488,7 +477,7 @@
     };
     
     // ============================================
-    // INICIALIZAR - CARGAR PRODUCTOS CON STOCK BAJO
+    // INICIALIZAR
     // ============================================
     document.addEventListener('DOMContentLoaded', function() {
         console.log('🚀 Dashboard inicializado');

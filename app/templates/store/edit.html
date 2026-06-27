@@ -89,17 +89,15 @@
                             <label class="form-check-label" for="isActive">Tienda Activa</label>
                         </div>
                         
-                        <button type="submit" class="btn btn-primary w-100" style="background: #10B981; border: none;">
-                            <i class="fas fa-save me-2"></i> Actualizar Tienda
-                        </button>
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-success">
+                                <i class="fas fa-save me-2"></i> Actualizar Tienda
+                            </button>
+                            <a href="{{ url_for('store.dashboard') }}" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left me-2"></i> Volver al Dashboard
+                            </a>
+                        </div>
                     </form>
-                    
-                    <!-- ✅ CORREGIDO: Eliminar el botón de eliminar que no existe -->
-                    <div class="mt-3 text-center">
-                        <a href="{{ url_for('store.dashboard') }}" class="btn btn-secondary">
-                            <i class="fas fa-arrow-left me-2"></i> Volver al Dashboard
-                        </a>
-                    </div>
                 </div>
             </div>
         </div>

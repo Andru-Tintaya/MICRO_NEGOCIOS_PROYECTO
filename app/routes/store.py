@@ -1,7 +1,7 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app
 from flask_login import login_required, current_user
 from werkzeug.utils import secure_filename
-from app.extensions import db, csrf  # <--- IMPORTAR csrf
+from app.extensions import db, csrf
 from app.models.store import Store
 from app.models.category import Category
 from app.models.product import Product
@@ -19,20 +19,17 @@ store_bp = Blueprint('store', __name__, url_prefix='/store')
 @login_required
 def create_store():
     """Crear tienda - Acceso para usuarios logueados"""
-    # Verificar si el usuario ya tiene tienda
     existing_store = Store.query.filter_by(user_id=current_user.id).first()
     if existing_store:
         flash('Ya tienes una tienda creada.', 'info')
         return redirect(url_for('store.dashboard'))
     
-    # Si no es vendedor, mostrar mensaje pero permitir crear
     if current_user.role not in ['vendedor', 'admin']:
         flash('Para crear una tienda, debes tener rol de vendedor.', 'warning')
     
     if request.method == 'POST':
-        # Verificar CSRF manualmente
         try:
-            csrf.protect()  # <--- VERIFICAR CSRF
+            csrf.protect()
         except Exception as e:
             flash('Error de seguridad. Por favor, recarga la página.', 'error')
             return render_template('store/create.html', categories=Category.query.all())
@@ -45,12 +42,10 @@ def create_store():
             address = request.form.get('address')
             category_id = request.form.get('category_id')
             
-            # Validaciones básicas
             if not all([name, whatsapp, city]):
                 flash('Nombre, WhatsApp y ciudad son obligatorios.', 'error')
                 return render_template('store/create.html', categories=Category.query.all())
             
-            # Crear tienda
             store = Store(
                 user_id=current_user.id,
                 name=name,
@@ -64,14 +59,12 @@ def create_store():
                 is_verified=False
             )
             
-            # Subir logo
             if 'logo' in request.files:
                 file = request.files['logo']
                 if file and file.filename:
                     filename = save_image(file, f'stores/{current_user.id}')
                     store.logo_url = filename
             
-            # Subir banner
             if 'banner' in request.files:
                 file = request.files['banner']
                 if file and file.filename:
@@ -81,7 +74,6 @@ def create_store():
             db.session.add(store)
             db.session.commit()
             
-            # Actualizar rol si es necesario
             if current_user.role != 'admin':
                 current_user.role = 'vendedor'
                 db.session.commit()
@@ -109,21 +101,21 @@ def dashboard():
         flash('No tienes una tienda. Crea una primero.', 'warning')
         return redirect(url_for('store.create_store'))
     
-    # Estadísticas
+    # ✅ CORREGIDO: usar len() en lugar de .count()
     total_products = Product.query.filter_by(store_id=store.id).count()
-    total_orders = store.orders.count() if store.orders else 0
+    total_orders = len(store.orders) if store.orders else 0
     
     # Productos recientes
     recent_products = Product.query.filter_by(store_id=store.id).order_by(Product.created_at.desc()).limit(5).all()
     
-    # 🔥 AGREGAR: Productos con stock bajo
+    # Productos con stock bajo
     low_stock_products = Product.query.filter(
         Product.store_id == store.id,
         Product.stock <= Product.min_stock,
         Product.stock > 0
     ).all()
     
-    # 🔥 AGREGAR: Categorías para el modal
+    # Categorías para el modal
     categories = Category.query.all()
     
     return render_template('store/dashboard.html', 
@@ -132,7 +124,7 @@ def dashboard():
                          total_products=total_products,
                          total_orders=total_orders,
                          low_stock_products=low_stock_products,
-                         categories=categories)  # 🔥 PASAR categories
+                         categories=categories)
 
 # ============================================
 # RUTA: EDITAR TIENDA (REQUIERE TIENDA)
@@ -148,7 +140,6 @@ def edit_store():
         return redirect(url_for('store.create_store'))
     
     if request.method == 'POST':
-        # Verificar CSRF manualmente
         try:
             csrf.protect()
         except Exception as e:
@@ -163,7 +154,6 @@ def edit_store():
             store.address = request.form.get('address', store.address)
             store.category_id = request.form.get('category_id', store.category_id)
             
-            # Subir nuevo logo
             if 'logo' in request.files:
                 file = request.files['logo']
                 if file and file.filename:
@@ -172,7 +162,6 @@ def edit_store():
                     filename = save_image(file, f'stores/{current_user.id}')
                     store.logo_url = filename
             
-            # Subir nuevo banner
             if 'banner' in request.files:
                 file = request.files['banner']
                 if file and file.filename:

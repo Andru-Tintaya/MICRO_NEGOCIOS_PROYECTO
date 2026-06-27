@@ -122,10 +122,9 @@ def login():
             elif user.is_vendor():
                 store = Store.query.filter_by(user_id=user.id).first()
                 if store:
-                    return redirect(url_for('store.dashboard'))
+                    return redirect(url_for('store.dashboard', store_id=store.id))
                 else:
-                    # <--- CAMBIO IMPORTANTE AQUÍ
-                    return redirect(url_for('store.create_store'))  # Antes era 'store.create'
+                    return redirect(url_for('store.create_store'))
             else:
                 return redirect(url_for('index'))
         
@@ -133,13 +132,15 @@ def login():
     
     return render_template('auth/login.html', form=form)
 
-@auth_bp.route('/logout')
+# ✅ LOGOUT CORREGIDO - Redirige directamente al login
+@auth_bp.route('/logout', methods=['GET', 'POST'])
 @login_required
 def logout():
+    """Cerrar sesión - Redirige al login"""
     logout_user()
     session.clear()
     flash('Sesión cerrada correctamente', 'info')
-    return redirect(url_for('index'))
+    return redirect(url_for('auth.login'))
 
 @auth_bp.route('/forgot-password', methods=['GET', 'POST'])
 def forgot_password():
@@ -158,3 +159,10 @@ def forgot_password():
             flash('No se encontró una cuenta con ese email', 'error')
     
     return render_template('auth/forgot_password.html')
+
+@auth_bp.route('/profile')
+@login_required
+def profile():
+    """Página de perfil del usuario"""
+    user = User.query.get(current_user.id)
+    return render_template('auth/profile.html', user=user)

@@ -3,163 +3,168 @@
 {% block title %}Editar Producto - {{ product.name }}{% endblock %}
 
 {% block content %}
-<div class="auth-container">
-    <div class="auth-card" data-aos="fade-up">
-        <div class="auth-header">
-            <i class="fas fa-edit"></i>
-            <h2>Editar Producto</h2>
-            <p>Actualiza la información de tu producto</p>
-        </div>
-        
-        <form method="POST" enctype="multipart/form-data" action="{{ url_for('product.edit', product_id=product.id) }}">
-            <div class="form-group">
-                <label><i class="fas fa-tag"></i> Nombre del Producto *</label>
-                <input type="text" name="name" value="{{ product.name }}" required>
-            </div>
-            
-            <div class="form-row">
-                <div class="form-group">
-                    <label><i class="fas fa-dollar-sign"></i> Precio (Bs) *</label>
-                    <input type="number" name="price" step="0.01" value="{{ product.price }}" required>
-                </div>
-                <div class="form-group">
-                    <label><i class="fas fa-tags"></i> Precio con Descuento</label>
-                    <input type="number" name="discount_price" step="0.01" value="{{ product.discount_price or '' }}">
-                </div>
-            </div>
-            
-            <div class="form-row">
-                <div class="form-group">
-                    <label><i class="fas fa-boxes"></i> Stock *</label>
-                    <input type="number" name="stock" value="{{ product.stock }}" required>
-                </div>
-                <div class="form-group">
-                    <label><i class="fas fa-exclamation-triangle"></i> Stock Mínimo</label>
-                    <input type="number" name="min_stock" value="{{ product.min_stock or 0 }}">
-                </div>
-            </div>
-            
-            <div class="form-group">
-                <label><i class="fas fa-list"></i> Categoría</label>
-                <select name="category_id">
-                    <option value="">Sin categoría</option>
-                    {% for category in categories %}
-                    <option value="{{ category.id }}" {% if product.category_id == category.id %}selected{% endif %}>
-                        {{ category.name }}
-                    </option>
-                    {% endfor %}
-                </select>
-            </div>
-            
-            <div class="form-group">
-                <label><i class="fas fa-align-left"></i> Descripción</label>
-                <textarea name="description" rows="4">{{ product.description or '' }}</textarea>
-            </div>
-            
-            <div class="form-group">
-                <label><i class="fas fa-image"></i> Imagen Principal</label>
-                {% if product.image_url %}
-                <div style="margin-bottom: 10px;">
-                    <img src="{{ product.image_url }}" style="max-width: 150px; border-radius: 8px; border: 1px solid #E2E8F0;">
-                </div>
-                {% endif %}
-                <div class="image-upload" id="imageUpload">
-                    <i class="fas fa-cloud-upload-alt"></i>
-                    <p>Haz clic para cambiar la imagen</p>
-                    <input type="file" name="image" accept="image/*" id="productImage">
-                    <img id="imagePreview" style="display: none; max-width: 200px; margin-top: 10px; border-radius: 8px;">
-                </div>
-            </div>
-            
-            <div class="form-group">
-                <label><i class="fas fa-images"></i> Imágenes Adicionales</label>
-                {% if product.images and product.images|length > 0 %}
-                <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 10px;">
-                    {% for img in product.images %}
-                    <div style="position: relative;">
-                        <img src="{{ img }}" style="width: 80px; height: 80px; object-fit: cover; border-radius: 8px; border: 1px solid #E2E8F0;">
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card shadow-sm border-0">
+                <div class="card-body p-4">
+                    <!-- Header -->
+                    <div class="text-center mb-4">
+                        <i class="fas fa-edit" style="font-size: 2.5rem; color: #10B981;"></i>
+                        <h2 class="fw-bold mt-2" style="color: #1E293B;">Editar Producto</h2>
+                        <p class="text-muted">Actualiza la información de tu producto</p>
                     </div>
-                    {% endfor %}
+
+                    <form method="POST" enctype="multipart/form-data" action="{{ url_for('product.edit', product_id=product.id) }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                        <!-- Nombre -->
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">
+                                <i class="fas fa-tag text-success me-1"></i> Nombre del Producto *
+                            </label>
+                            <input type="text" name="name" class="form-control" value="{{ product.name }}" required>
+                        </div>
+
+                        <!-- Precio y Descuento -->
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-semibold">
+                                    <i class="fas fa-dollar-sign text-success me-1"></i> Precio (Bs) *
+                                </label>
+                                <input type="number" name="price" step="0.01" class="form-control" value="{{ product.price }}" required>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-semibold">
+                                    <i class="fas fa-tags text-success me-1"></i> Precio con Descuento
+                                </label>
+                                <input type="number" name="discount_price" step="0.01" class="form-control" value="{{ product.discount_price or '' }}">
+                            </div>
+                        </div>
+
+                        <!-- Stock y Stock Mínimo -->
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-semibold">
+                                    <i class="fas fa-boxes text-success me-1"></i> Stock *
+                                </label>
+                                <input type="number" name="stock" class="form-control" value="{{ product.stock }}" required>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-semibold">
+                                    <i class="fas fa-exclamation-triangle text-success me-1"></i> Stock Mínimo
+                                </label>
+                                <input type="number" name="min_stock" class="form-control" value="{{ product.min_stock or 0 }}">
+                            </div>
+                        </div>
+
+                        <!-- Categoría -->
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">
+                                <i class="fas fa-list text-success me-1"></i> Categoría
+                            </label>
+                            <select name="category_id" class="form-select">
+                                <option value="">Sin categoría</option>
+                                {% for category in categories %}
+                                <option value="{{ category.id }}" {% if product.category_id == category.id %}selected{% endif %}>
+                                    {{ category.name }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <!-- Descripción -->
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">
+                                <i class="fas fa-align-left text-success me-1"></i> Descripción
+                            </label>
+                            <textarea name="description" class="form-control" rows="4">{{ product.description or '' }}</textarea>
+                        </div>
+
+                        <!-- Imagen Principal -->
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">
+                                <i class="fas fa-image text-success me-1"></i> Imagen Principal
+                            </label>
+                            {% if product.image_url %}
+                            <div class="mb-2">
+                                <img src="{{ product.image_url }}" style="max-width: 150px; border-radius: 8px; border: 1px solid #E2E8F0;">
+                            </div>
+                            {% endif %}
+                            <div class="image-upload" id="imageUpload" style="border: 2px dashed #E2E8F0; padding: 20px; text-align: center; border-radius: 8px; cursor: pointer; transition: all 0.3s; background: #F8FAFC;">
+                                <i class="fas fa-cloud-upload-alt" style="font-size: 1.5rem; color: #10B981;"></i>
+                                <p class="text-muted mb-0">Haz clic para cambiar la imagen</p>
+                                <input type="file" name="image" accept="image/*" id="productImage" style="display: none;">
+                                <img id="imagePreview" style="display: none; max-width: 200px; margin-top: 10px; border-radius: 8px;">
+                            </div>
+                        </div>
+
+                        <!-- Imágenes Adicionales -->
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">
+                                <i class="fas fa-images text-success me-1"></i> Imágenes Adicionales
+                            </label>
+                            {% if product.images and product.images|length > 0 %}
+                            <div class="d-flex gap-2 flex-wrap mb-2">
+                                {% for img in product.images %}
+                                <img src="{{ img }}" style="width: 80px; height: 80px; object-fit: cover; border-radius: 8px; border: 1px solid #E2E8F0;">
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                            <div class="image-upload" id="galleryUpload" style="border: 2px dashed #E2E8F0; padding: 20px; text-align: center; border-radius: 8px; cursor: pointer; transition: all 0.3s; background: #F8FAFC;">
+                                <i class="fas fa-images" style="font-size: 1.5rem; color: #10B981;"></i>
+                                <p class="text-muted mb-0">Haz clic para agregar más imágenes</p>
+                                <input type="file" name="images" accept="image/*" multiple id="galleryImages" style="display: none;">
+                            </div>
+                            <div id="galleryPreview" class="d-flex gap-2 flex-wrap mt-2"></div>
+                        </div>
+
+                        <!-- Checkboxes -->
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <div class="form-check">
+                                    <input type="checkbox" name="is_featured" class="form-check-input" id="isFeatured" {% if product.is_featured %}checked{% endif %}>
+                                    <label class="form-check-label" for="isFeatured">Producto Destacado</label>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-check">
+                                    <input type="checkbox" name="is_active" class="form-check-input" id="isActive" {% if product.is_active %}checked{% endif %}>
+                                    <label class="form-check-label" for="isActive">Producto Activo</label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Botones -->
+                        <div class="d-grid gap-2 d-md-flex">
+                            <button type="submit" class="btn btn-success flex-grow-1">
+                                <i class="fas fa-save me-2"></i> Actualizar Producto
+                            </button>
+                            <a href="{{ url_for('product.detail', slug=product.slug) }}" class="btn btn-secondary flex-grow-1">
+                                <i class="fas fa-eye me-2"></i> Ver Producto
+                            </a>
+                        </div>
+                    </form>
+
+                    <!-- Eliminar Producto -->
+                    <div class="mt-4 pt-3 border-top text-center">
+                        <form method="POST" action="{{ url_for('product.delete', product_id=product.id) }}" 
+                              onsubmit="return confirm('¿Estás seguro de eliminar este producto? Esta acción no se puede deshacer.')">
+                            <button type="submit" class="btn btn-danger">
+                                <i class="fas fa-trash me-2"></i> Eliminar Producto
+                            </button>
+                        </form>
+                    </div>
                 </div>
-                {% endif %}
-                <div class="image-upload" id="galleryUpload">
-                    <i class="fas fa-images"></i>
-                    <p>Haz clic para agregar más imágenes</p>
-                    <input type="file" name="images" accept="image/*" multiple id="galleryImages">
-                </div>
-                <div id="galleryPreview" style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px;"></div>
             </div>
-            
-            <div class="form-row">
-                <div class="form-group checkbox">
-                    <label>
-                        <input type="checkbox" name="is_featured" {% if product.is_featured %}checked{% endif %}> Producto Destacado
-                    </label>
-                </div>
-                <div class="form-group checkbox">
-                    <label>
-                        <input type="checkbox" name="is_active" {% if product.is_active %}checked{% endif %}> Producto Activo
-                    </label>
-                </div>
-            </div>
-            
-            <div style="display: flex; gap: 12px;">
-                <button type="submit" class="btn-primary" style="flex: 1;">
-                    <i class="fas fa-save"></i> Actualizar Producto
-                </button>
-                <a href="{{ url_for('product.detail', slug=product.slug) }}" class="btn-secondary" style="flex: 1; text-align: center; padding: 12px; background: #E2E8F0; border-radius: 8px; text-decoration: none; color: #1E293B; font-weight: 600;">
-                    <i class="fas fa-eye"></i> Ver Producto
-                </a>
-            </div>
-        </form>
-        
-        <div style="margin-top: 20px; border-top: 1px solid #E2E8F0; padding-top: 20px; text-align: center;">
-            <form method="POST" action="{{ url_for('product.delete', product_id=product.id) }}" 
-                  onsubmit="return confirm('¿Estás seguro de eliminar este producto? Esta acción no se puede deshacer.')">
-                <button type="submit" style="background: #EF4444; color: white; border: none; padding: 10px 24px; border-radius: 8px; cursor: pointer; font-weight: 600;">
-                    <i class="fas fa-trash"></i> Eliminar Producto
-                </button>
-            </form>
         </div>
     </div>
 </div>
 
 <style>
-.form-row {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 16px;
-}
-
-.image-upload {
-    border: 2px dashed #E2E8F0;
-    padding: 20px;
-    text-align: center;
-    border-radius: 12px;
-    cursor: pointer;
-    transition: all 0.3s;
-    background: #F8FAFC;
-}
-
 .image-upload:hover {
-    border-color: #10B981;
-    background: #ECFDF5;
-}
-
-.image-upload i {
-    font-size: 1.5rem;
-    color: #10B981;
-    margin-bottom: 4px;
-}
-
-.image-upload p {
-    color: #64748B;
-    margin: 0;
-    font-size: 0.9rem;
-}
-
-.image-upload input {
-    display: none;
+    border-color: #10B981 !important;
+    background: #ECFDF5 !important;
 }
 
 #galleryPreview img {
@@ -170,14 +175,23 @@
     border: 2px solid #E2E8F0;
 }
 
+.btn-success:hover {
+    background: #059669 !important;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
 .btn-secondary:hover {
     background: #CBD5E1 !important;
 }
 
-@media (max-width: 768px) {
-    .form-row {
-        grid-template-columns: 1fr;
-    }
+.btn-danger:hover {
+    background: #DC2626 !important;
+}
+
+.form-control:focus, .form-select:focus {
+    border-color: #10B981;
+    box-shadow: 0 0 0 0.2rem rgba(16, 185, 129, 0.25);
 }
 </style>
 

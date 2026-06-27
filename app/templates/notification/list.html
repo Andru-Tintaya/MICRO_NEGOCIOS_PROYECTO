@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+
+{% block title %}Mis Notificaciones - MiZona{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="section-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
+        <h1 style="font-size: 1.8rem; font-weight: 800; color: #1E293B;">
+            <i class="fas fa-bell" style="color: #10B981;"></i> Mis Notificaciones
+        </h1>
+        <button onclick="markAllRead()" class="btn btn-primary" style="background: #10B981; border: none; padding: 10px 20px; border-radius: 8px; color: white; font-weight: 600; cursor: pointer;">
+            <i class="fas fa-check-double"></i> Marcar todas como leídas
+        </button>
+    </div>
+
+    {% if notifications %}
+        <div style="display: flex; flex-direction: column; gap: 12px;">
+            {% for notification in notifications %}
+            <div class="card" style="border-left: 4px solid {% if not notification.is_read %}#10B981{% else %}#E2E8F0{% endif %}; background: white; border-radius: 12px; padding: 16px 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                    <div style="flex: 1;">
+                        <h5 style="font-size: 1rem; font-weight: 600; color: #1E293B; margin-bottom: 4px;">
+                            {% if notification.type == 'order' %}
+                                <i class="fas fa-shopping-bag" style="color: #3B82F6;"></i>
+                            {% elif notification.type == 'review' %}
+                                <i class="fas fa-star" style="color: #F59E0B;"></i>
+                            {% elif notification.type == 'promotion' %}
+                                <i class="fas fa-gift" style="color: #8B5CF6;"></i>
+                            {% else %}
+                                <i class="fas fa-info-circle" style="color: #10B981;"></i>
+                            {% endif %}
+                            {{ notification.title }}
+                        </h5>
+                        <p style="color: #64748B; margin-bottom: 8px;">{{ notification.message }}</p>
+                        {% if notification.link %}
+                        <a href="{{ notification.link }}" class="btn-view" style="display: inline-block; padding: 4px 12px; background: #D1FAE5; color: #065F46; border-radius: 6px; text-decoration: none; font-size: 0.85rem; font-weight: 500;">
+                            Ver detalles
+                        </a>
+                        {% endif %}
+                    </div>
+                    <div style="text-align: right; min-width: 100px;">
+                        <small style="color: #94A3B8; font-size: 0.8rem;">{{ notification.created_at.strftime('%d/%m/%Y %H:%M') }}</small>
+                        {% if not notification.is_read %}
+                        <span class="badge" style="display: inline-block; padding: 2px 10px; background: #10B981; color: white; border-radius: 12px; font-size: 0.7rem; font-weight: 600; margin-left: 8px;">Nueva</span>
+                        <button onclick="markRead('{{ notification.id }}')" style="background: none; border: none; color: #10B981; cursor: pointer; margin-left: 4px;">
+                            <i class="fas fa-check-circle"></i>
+                        </button>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="empty-state" style="text-align: center; padding: 60px 20px; background: white; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+            <i class="fas fa-bell-slash" style="font-size: 3rem; color: #94A3B8;"></i>
+            <h3 style="font-size: 1.2rem; color: #1E293B; margin-top: 16px;">No tienes notificaciones</h3>
+            <p style="color: #64748B; margin-bottom: 20px;">Aquí aparecerán tus notificaciones cuando tengas actividad</p>
+            <a href="{{ url_for('index') }}" class="btn-primary" style="display: inline-block; padding: 10px 24px; background: #10B981; color: white; border: none; border-radius: 8px; text-decoration: none; font-weight: 600; transition: all 0.3s;">
+                <i class="fas fa-home"></i> Ir al Inicio
+            </a>
+        </div>
+    {% endif %}
+</div>
+
+<script>
+function markRead(notificationId) {
+    fetch(`/api/notifications/${notificationId}/read`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': document.querySelector('meta[name="csrf-token"]')?.content || ''
+        }
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+    });
+}
+
+function markAllRead() {
+    if (!confirm('¿Marcar todas las notificaciones como leídas?')) return;
+    
+    fetch('/api/notifications/mark-all-read', {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': document.querySelector('meta[name="csrf-token"]')?.content || ''
+        }
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+    });
+}
+</script>
+{% endblock %}

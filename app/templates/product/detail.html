@@ -24,7 +24,6 @@
             <div class="product-detail-info" data-aos="fade-left">
                 <div class="product-breadcrumb">
                     <a href="{{ url_for('index') }}">Inicio</a> &gt;
-                    <!-- ✅ CORREGIDO: store.view_store en lugar de store.view -->
                     <a href="{{ url_for('store.view_store', slug=product.store.slug) }}">{{ product.store.name }}</a> &gt;
                     <span>{{ product.name }}</span>
                 </div>
@@ -517,107 +516,191 @@
 </style>
 
 <script>
-// Cambiar imagen principal
-function changeImage(src) {
-    document.getElementById('mainImage').src = src;
-}
-
-// Cambiar cantidad
-function changeQuantity(delta) {
-    const input = document.getElementById('quantity');
-    let value = parseInt(input.value) + delta;
-    const max = parseInt(input.max);
-    if (value < 1) value = 1;
-    if (value > max) value = max;
-    input.value = value;
-}
-
-// Agregar al carrito desde el detalle
-function addToCartFromDetail() {
-    const quantity = parseInt(document.getElementById('quantity').value);
-    const productId = '{{ product.id }}';
-    const name = '{{ product.name }}';
-    const price = {{ product.get_price_with_discount() }};
+    // ============================================
+    // FUNCIONES DEL CARRITO (GLOBALES)
+    // ============================================
     
-    for (let i = 0; i < quantity; i++) {
-        addToCart(productId, name, price);
+    // Obtener el carrito del localStorage
+    function getCart() {
+        try {
+            return JSON.parse(localStorage.getItem('shopping_cart')) || [];
+        } catch {
+            return [];
+        }
     }
-}
-
-// Cargar reseñas
-function loadReviews() {
-    const productId = '{{ product.id }}';
-    fetch(`/api/reviews/${productId}`)
+    
+    // Guardar el carrito en localStorage
+    function saveCart(cart) {
+        localStorage.setItem('shopping_cart', JSON.stringify(cart));
+        updateCartBadge();
+    }
+    
+    // Actualizar el badge del carrito en el navbar
+    function updateCartBadge() {
+        const cart = getCart();
+        const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
+        const badge = document.getElementById('cartBadge');
+        if (badge) {
+            badge.textContent = totalItems;
+            badge.style.display = totalItems > 0 ? 'inline-block' : 'none';
+        }
+    }
+    
+    // ✅ CORREGIDO: Agregar store_id al carrito
+    function addToCart(productId, name, price, image = null, storeId = null) {
+        const cart = getCart();
+        const existing = cart.find(item => item.id === productId);
+        
+        if (existing) {
+            existing.quantity += 1;
+        } else {
+            cart.push({
+                id: productId,
+                name: name,
+                price: price,
+                image: image,
+                quantity: 1,
+                store_id: storeId || '{{ product.store_id }}'  // ✅ GUARDAR store_id
+            });
+        }
+        
+        saveCart(cart);
+        showNotification(`✅ ${name} agregado al carrito`);
+        updateCartBadge();
+    }
+    
+    // Mostrar notificación
+    function showNotification(message, type = 'success') {
+        const div = document.createElement('div');
+        div.className = `flash-message flash-${type}`;
+        div.textContent = message;
+        div.style.cssText = `
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 99999;
+            max-width: 350px;
+            padding: 12px 20px;
+            border-radius: 8px;
+            background: ${type === 'success' ? '#D1FAE5' : '#FEE2E2'};
+            color: ${type === 'success' ? '#065F46' : '#991B1B'};
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            animation: slideInRight 0.3s ease;
+        `;
+        document.body.appendChild(div);
+        setTimeout(() => { div.remove(); }, 3000);
+    }
+    
+    // ============================================
+    // FUNCIONES EXISTENTES (modificadas)
+    // ============================================
+    
+    // Cambiar imagen principal
+    function changeImage(src) {
+        document.getElementById('mainImage').src = src;
+    }
+    
+    // Cambiar cantidad
+    function changeQuantity(delta) {
+        const input = document.getElementById('quantity');
+        let value = parseInt(input.value) + delta;
+        const max = parseInt(input.max);
+        if (value < 1) value = 1;
+        if (value > max) value = max;
+        input.value = value;
+    }
+    
+    // ✅ CORREGIDO: Pasar store_id
+    function addToCartFromDetail() {
+        const quantity = parseInt(document.getElementById('quantity').value);
+        const productId = '{{ product.id }}';
+        const name = '{{ product.name }}';
+        const price = {{ product.get_price_with_discount() }};
+        const image = '{{ product.image_url }}';
+        const storeId = '{{ product.store_id }}';  // ✅ OBTENER store_id
+        
+        for (let i = 0; i < quantity; i++) {
+            addToCart(productId, name, price, image, storeId);  // ✅ PASAR store_id
+        }
+    }
+    
+    // ============================================
+    // RESEÑAS (sin cambios)
+    // ============================================
+    
+    // Cargar reseñas
+    function loadReviews() {
+        const productId = '{{ product.id }}';
+        fetch(`/api/reviews/${productId}`)
+            .then(res => res.json())
+            .then(data => {
+                const container = document.getElementById('reviewsList');
+                if (data.success && data.data.length > 0) {
+                    container.innerHTML = data.data.map(review => `
+                        <div class="review-item">
+                            <div class="review-header">
+                                <div class="review-user">
+                                    <strong>${review.user?.full_name || 'Usuario'}</strong>
+                                    <span class="review-date">${new Date(review.created_at).toLocaleDateString()}</span>
+                                </div>
+                                <div class="review-rating">
+                                    ${'★'.repeat(review.rating)}${'☆'.repeat(5 - review.rating)}
+                                </div>
+                            </div>
+                            <p>${review.comment || ''}</p>
+                        </div>
+                    `).join('');
+                } else {
+                    container.innerHTML = '<p style="color: var(--text-muted);">Sin reseñas aún. ¡Sé el primero en calificar!</p>';
+                }
+            });
+    }
+    
+    // Enviar reseña
+    document.getElementById('reviewForm')?.addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const formData = new FormData(this);
+        const data = {
+            product_id: formData.get('product_id'),
+            rating: formData.get('rating'),
+            comment: formData.get('comment')
+        };
+        
+        if (!data.rating) {
+            alert('Selecciona una calificación');
+            return;
+        }
+        
+        fetch('/api/reviews', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('meta[name="csrf-token"]')?.content || ''
+            },
+            body: JSON.stringify(data)
+        })
         .then(res => res.json())
         .then(data => {
-            const container = document.getElementById('reviewsList');
-            if (data.success && data.data.length > 0) {
-                container.innerHTML = data.data.map(review => `
-                    <div class="review-item">
-                        <div class="review-header">
-                            <div class="review-user">
-                                <strong>${review.user?.full_name || 'Usuario'}</strong>
-                                <span class="review-date">${new Date(review.created_at).toLocaleDateString()}</span>
-                            </div>
-                            <div class="review-rating">
-                                ${'★'.repeat(review.rating)}${'☆'.repeat(5 - review.rating)}
-                            </div>
-                        </div>
-                        <p>${review.comment || ''}</p>
-                    </div>
-                `).join('');
+            if (data.success) {
+                alert('✅ Reseña publicada con éxito');
+                loadReviews();
+                this.reset();
             } else {
-                container.innerHTML = '<p style="color: var(--text-muted);">Sin reseñas aún. ¡Sé el primero en calificar!</p>';
+                alert('❌ Error: ' + data.error);
             }
+        })
+        .catch(error => {
+            alert('❌ Error al publicar reseña');
         });
-}
-
-// Enviar reseña
-document.getElementById('reviewForm')?.addEventListener('submit', function(e) {
-    e.preventDefault();
-    
-    const formData = new FormData(this);
-    const data = {
-        product_id: formData.get('product_id'),
-        rating: formData.get('rating'),
-        comment: formData.get('comment')
-    };
-    
-    if (!data.rating) {
-        alert('Selecciona una calificación');
-        return;
-    }
-    
-    fetch('/api/reviews', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': document.querySelector('meta[name="csrf-token"]')?.content || ''
-        },
-        body: JSON.stringify(data)
-    })
-    .then(res => res.json())
-    .then(data => {
-        if (data.success) {
-            alert('✅ Reseña publicada con éxito');
-            loadReviews();
-            this.reset();
-        } else {
-            alert('❌ Error: ' + data.error);
-        }
-    })
-    .catch(error => {
-        alert('❌ Error al publicar reseña');
     });
-});
-
-// Inicializar
-document.addEventListener('DOMContentLoaded', function() {
-    loadReviews();
-});
-
-function addToCart(productId, name, price) {
-    alert(`🛒 ${name} agregado al carrito (Bs ${price.toFixed(2)})`);
-}
+    
+    // ============================================
+    // INICIALIZAR
+    // ============================================
+    document.addEventListener('DOMContentLoaded', function() {
+        loadReviews();
+        updateCartBadge();
+    });
 </script>
 {% endblock %}

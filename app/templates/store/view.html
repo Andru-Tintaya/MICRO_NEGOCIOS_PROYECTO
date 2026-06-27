@@ -139,162 +139,217 @@
 </div>
 
 <script>
-// ============================================
-// CARRITO
-// ============================================
-let cart = JSON.parse(localStorage.getItem('cart_' + '{{ store.id }}')) || [];
-
-function addToCart(productId, name, price) {
-    const existing = cart.find(item => item.id === productId);
-    if (existing) {
-        existing.quantity += 1;
-    } else {
-        cart.push({ id: productId, name, price, quantity: 1 });
-    }
-    localStorage.setItem('cart_' + '{{ store.id }}', JSON.stringify(cart));
-    updateCart();
-    showNotification('✅ Producto agregado al carrito');
-}
-
-function updateCart() {
-    const count = cart.reduce((sum, item) => sum + item.quantity, 0);
-    document.getElementById('cartCount').textContent = count;
+    // ============================================
+    // CARRITO - VERSIÓN CORREGIDA (GLOBAL)
+    // ============================================
     
-    const cartItems = document.getElementById('cartItems');
-    const cartTotal = document.getElementById('cartTotal');
-    
-    if (cart.length === 0) {
-        cartItems.innerHTML = '<p style="color: #94A3B8; text-align: center; padding: 20px 0;">El carrito está vacío</p>';
-        cartTotal.textContent = 'Bs 0.00';
-        return;
-    }
-    
-    cartItems.innerHTML = cart.map(item => `
-        <div class="cart-item" style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #F1F5F9;">
-            <span>${item.name} <strong>x${item.quantity}</strong></span>
-            <span style="display: flex; align-items: center; gap: 12px;">
-                <span>Bs ${(item.price * item.quantity).toFixed(2)}</span>
-                <button onclick="removeFromCart('${item.id}')" style="background: none; border: none; color: #EF4444; cursor: pointer; font-size: 1.2rem;">&times;</button>
-            </span>
-        </div>
-    `).join('');
-    
-    const total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-    cartTotal.textContent = `Bs ${total.toFixed(2)}`;
-}
-
-function removeFromCart(productId) {
-    cart = cart.filter(item => item.id !== productId);
-    localStorage.setItem('cart_' + '{{ store.id }}', JSON.stringify(cart));
-    updateCart();
-}
-
-function toggleCart() {
-    const panel = document.getElementById('cartPanel');
-    panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
-}
-
-function sendWhatsApp() {
-    if (cart.length === 0) {
-        alert('El carrito está vacío');
-        return;
-    }
-    
-    const storeId = '{{ store.id }}';
-    const products = cart.map(item => item.id);
-    const quantities = cart.map(item => item.quantity);
-    const total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-    
-    const params = new URLSearchParams({
-        'products[]': products,
-        'quantities[]': quantities,
-        total: total
-    });
-    
-    window.location.href = `/whatsapp-order/${storeId}?${params}`;
-}
-
-function showNotification(message) {
-    const div = document.createElement('div');
-    div.className = 'flash-message flash-success';
-    div.textContent = message;
-    div.style.cssText = 'position: fixed; bottom: 100px; right: 20px; z-index: 9999; max-width: 300px; background: #D1FAE5; color: #065F46; padding: 12px 20px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);';
-    document.body.appendChild(div);
-    
-    setTimeout(() => {
-        div.remove();
-    }, 3000);
-}
-
-// ============================================
-// SEGUIR TIENDA
-// ============================================
-function toggleFollow() {
-    const storeId = '{{ store.id }}';
-    fetch('/api/followers', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': document.querySelector('meta[name="csrf-token"]')?.content || ''
-        },
-        body: JSON.stringify({ store_id: storeId })
-    })
-    .then(res => res.json())
-    .then(data => {
-        if (data.success) {
-            const btn = document.getElementById('followBtn');
-            const text = document.getElementById('followText');
-            
-            if (data.action === 'followed') {
-                text.textContent = 'Siguiendo';
-                btn.classList.add('btn-success');
-                btn.classList.remove('btn-outline-success');
-            } else {
-                text.textContent = 'Seguir';
-                btn.classList.remove('btn-success');
-                btn.classList.add('btn-outline-success');
-            }
+    // Obtener el carrito del localStorage
+    function getCart() {
+        try {
+            return JSON.parse(localStorage.getItem('shopping_cart')) || [];
+        } catch {
+            return [];
         }
-    });
-}
-
-// ============================================
-// FILTROS DE PRODUCTOS
-// ============================================
-function filterProducts() {
-    const search = document.getElementById('searchProduct').value.toLowerCase();
-    const sort = document.getElementById('sortProducts').value;
-    const grid = document.getElementById('productsGrid');
-    const cards = Array.from(grid.querySelectorAll('.product-card'));
+    }
     
-    // Filtrar
-    cards.forEach(card => {
-        const name = card.querySelector('h3').textContent.toLowerCase();
-        card.style.display = name.includes(search) ? '' : 'none';
-    });
+    // Guardar el carrito en localStorage
+    function saveCart(cart) {
+        localStorage.setItem('shopping_cart', JSON.stringify(cart));
+        updateCart();
+        updateCartBadge();
+    }
     
-    // Ordenar
-    const visibleCards = cards.filter(card => card.style.display !== 'none');
-    visibleCards.sort((a, b) => {
-        if (sort === 'price_asc') {
-            return parseFloat(a.dataset.price) - parseFloat(b.dataset.price);
-        } else if (sort === 'price_desc') {
-            return parseFloat(b.dataset.price) - parseFloat(a.dataset.price);
-        } else if (sort === 'rating') {
-            return parseFloat(b.dataset.rating) - parseFloat(a.dataset.rating);
+    // Actualizar el badge del carrito en el navbar
+    function updateCartBadge() {
+        const cart = getCart();
+        const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
+        const badge = document.getElementById('cartBadge');
+        if (badge) {
+            badge.textContent = totalItems;
+            badge.style.display = totalItems > 0 ? 'inline-block' : 'none';
+        }
+    }
+    
+    // ============================================
+    // FUNCIONES DEL CARRITO (tienda específica)
+    // ============================================
+    
+    function addToCart(productId, name, price, image = null) {
+        const cart = getCart();
+        const existing = cart.find(item => item.id === productId);
+        
+        if (existing) {
+            existing.quantity += 1;
         } else {
-            return new Date(b.dataset.created) - new Date(a.dataset.created);
+            cart.push({
+                id: productId,
+                name: name,
+                price: price,
+                image: image,
+                quantity: 1,
+                store_id: '{{ store.id }}'
+            });
         }
-    });
+        
+        saveCart(cart);
+        updateCart();
+        updateCartBadge();
+        showNotification('✅ Producto agregado al carrito');
+    }
     
-    visibleCards.forEach(card => grid.appendChild(card));
-}
-
-// ============================================
-// INICIALIZAR
-// ============================================
-document.addEventListener('DOMContentLoaded', function() {
-    updateCart();
-});
-</script>
+    function updateCart() {
+        const cart = getCart();
+        const count = cart.reduce((sum, item) => sum + item.quantity, 0);
+        const cartCount = document.getElementById('cartCount');
+        if (cartCount) cartCount.textContent = count;
+        
+        const cartItems = document.getElementById('cartItems');
+        const cartTotal = document.getElementById('cartTotal');
+        
+        if (!cartItems || !cartTotal) return;
+        
+        if (cart.length === 0) {
+            cartItems.innerHTML = '<p style="color: #94A3B8; text-align: center; padding: 20px 0;">El carrito está vacío</p>';
+            cartTotal.textContent = 'Bs 0.00';
+            return;
+        }
+        
+        cartItems.innerHTML = cart.map(item => `
+            <div class="cart-item" style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #F1F5F9;">
+                <span>${item.name} <strong>x${item.quantity}</strong></span>
+                <span style="display: flex; align-items: center; gap: 12px;">
+                    <span>Bs ${(item.price * item.quantity).toFixed(2)}</span>
+                    <button onclick="removeFromCart('${item.id}')" style="background: none; border: none; color: #EF4444; cursor: pointer; font-size: 1.2rem;">&times;</button>
+                </span>
+            </div>
+        `).join('');
+        
+        const total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+        cartTotal.textContent = `Bs ${total.toFixed(2)}`;
+    }
+    
+    function removeFromCart(productId) {
+        let cart = getCart();
+        cart = cart.filter(item => item.id !== productId);
+        saveCart(cart);
+        updateCart();
+        updateCartBadge();
+    }
+    
+    function toggleCart() {
+        const panel = document.getElementById('cartPanel');
+        if (panel) {
+            panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+        }
+    }
+    
+    function sendWhatsApp() {
+        const cart = getCart();
+        if (cart.length === 0) {
+            alert('El carrito está vacío');
+            return;
+        }
+        
+        // Crear mensaje para WhatsApp
+        let message = '🛒 *Pedido de MiZona*\n\n';
+        cart.forEach(item => {
+            message += `• ${item.name} x${item.quantity} = Bs ${(item.price * item.quantity).toFixed(2)}\n`;
+        });
+        message += `\n📦 *Total: Bs ${cart.reduce((sum, item) => sum + (item.price * item.quantity), 0).toFixed(2)}*`;
+        message += `\n\n📌 Tienda: {{ store.name }}`;
+        message += `\n📍 Ciudad: {{ store.city }}`;
+        
+        // Redirigir a WhatsApp
+        const phone = '{{ store.whatsapp.replace("+", "") }}';
+        const url = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
+        window.open(url, '_blank');
+        
+        // Limpiar carrito (opcional)
+        // localStorage.removeItem('shopping_cart');
+        // updateCart();
+        // updateCartBadge();
+    }
+    
+    function showNotification(message) {
+        const div = document.createElement('div');
+        div.className = 'flash-message flash-success';
+        div.textContent = message;
+        div.style.cssText = 'position: fixed; bottom: 100px; right: 20px; z-index: 99999; max-width: 300px; background: #D1FAE5; color: #065F46; padding: 12px 20px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);';
+        document.body.appendChild(div);
+        
+        setTimeout(() => {
+            div.remove();
+        }, 3000);
+    }
+    
+    // ============================================
+    // SEGUIR TIENDA
+    // ============================================
+    function toggleFollow() {
+        const storeId = '{{ store.id }}';
+        fetch('/api/followers', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('meta[name="csrf-token"]')?.content || ''
+            },
+            body: JSON.stringify({ store_id: storeId })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                const btn = document.getElementById('followBtn');
+                const text = document.getElementById('followText');
+                
+                if (data.action === 'followed') {
+                    text.textContent = 'Siguiendo';
+                    btn.classList.add('btn-success');
+                    btn.classList.remove('btn-outline-success');
+                } else {
+                    text.textContent = 'Seguir';
+                    btn.classList.remove('btn-success');
+                    btn.classList.add('btn-outline-success');
+                }
+            }
+        });
+    }
+    
+    // ============================================
+    // FILTROS DE PRODUCTOS
+    // ============================================
+    function filterProducts() {
+        const search = document.getElementById('searchProduct').value.toLowerCase();
+        const sort = document.getElementById('sortProducts').value;
+        const grid = document.getElementById('productsGrid');
+        const cards = Array.from(grid.querySelectorAll('.product-card'));
+        
+        cards.forEach(card => {
+            const name = card.querySelector('h3').textContent.toLowerCase();
+            card.style.display = name.includes(search) ? '' : 'none';
+        });
+        
+        const visibleCards = cards.filter(card => card.style.display !== 'none');
+        visibleCards.sort((a, b) => {
+            if (sort === 'price_asc') {
+                return parseFloat(a.dataset.price) - parseFloat(b.dataset.price);
+            } else if (sort === 'price_desc') {
+                return parseFloat(b.dataset.price) - parseFloat(a.dataset.price);
+            } else if (sort === 'rating') {
+                return parseFloat(b.dataset.rating) - parseFloat(a.dataset.rating);
+            } else {
+                return new Date(b.dataset.created) - new Date(a.dataset.created);
+            }
+        });
+        
+        visibleCards.forEach(card => grid.appendChild(card));
+    }
+    
+    // ============================================
+    // INICIALIZAR
+    // ============================================
+    document.addEventListener('DOMContentLoaded', function() {
+        updateCart();
+        updateCartBadge();
+    });
+    </script>
 {% endblock %}

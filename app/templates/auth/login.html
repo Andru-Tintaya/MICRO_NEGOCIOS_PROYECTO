@@ -4,29 +4,28 @@
 {% block content %}
 <div class="container">
     <div class="row justify-content-center">
-        <div class="col-md-5">
-            <div class="card shadow-sm mt-5">
-                <div class="card-body p-4">
+        <div class="col-md-6 col-lg-5">
+            <div class="card shadow-sm border-0 mt-5">
+                <div class="card-body p-4 p-md-5">
                     <div class="text-center mb-4">
                         <i class="fas fa-store" style="font-size: 3rem; color: #10B981;"></i>
-                        <h2 class="mt-2">Bienvenido</h2>
+                        <h2 class="fw-bold mt-2" style="color: #1E293B;">Bienvenido</h2>
                         <p class="text-muted">Inicia sesión para continuar</p>
                     </div>
                     
                     <form method="POST" action="{{ url_for('auth.login') }}">
-                        <!-- ✅ CSRF TOKEN OBLIGATORIO -->
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         
                         <div class="mb-3">
-                            <label for="identifier" class="form-label">
-                                <i class="fas fa-envelope me-1"></i> Email o WhatsApp
+                            <label for="identifier" class="form-label fw-semibold">
+                                <i class="fas fa-envelope me-1 text-success"></i> Email o WhatsApp
                             </label>
                             {{ form.identifier(class="form-control", placeholder="ejemplo@email.com o +59170000000") }}
                         </div>
                         
                         <div class="mb-3">
-                            <label for="password" class="form-label">
-                                <i class="fas fa-lock me-1"></i> Contraseña
+                            <label for="password" class="form-label fw-semibold">
+                                <i class="fas fa-lock me-1 text-success"></i> Contraseña
                             </label>
                             {{ form.password(class="form-control", placeholder="••••••••") }}
                         </div>
@@ -36,19 +35,19 @@
                                 {{ form.remember(class="form-check-input") }}
                                 <label class="form-check-label" for="remember">Recordarme</label>
                             </div>
-                            <a href="{{ url_for('auth.forgot_password') }}" style="color: #10B981; text-decoration: none;">
+                            <a href="{{ url_for('auth.forgot_password') }}" class="text-decoration-none" style="color: #10B981;">
                                 ¿Olvidaste tu contraseña?
                             </a>
                         </div>
                         
-                        <button type="submit" class="btn btn-primary w-100" style="background: #10B981; border: none;">
+                        <button type="submit" class="btn btn-success w-100 py-2 fw-semibold" style="background: #10B981; border: none;">
                             <i class="fas fa-sign-in-alt me-2"></i> Iniciar Sesión
                         </button>
                     </form>
                     
                     <p class="text-center mt-3 text-muted">
                         ¿No tienes cuenta? 
-                        <a href="{{ url_for('auth.register') }}" style="color: #10B981; font-weight: 600; text-decoration: none;">
+                        <a href="{{ url_for('auth.register') }}" class="fw-semibold text-decoration-none" style="color: #10B981;">
                             Regístrate aquí
                         </a>
                     </p>

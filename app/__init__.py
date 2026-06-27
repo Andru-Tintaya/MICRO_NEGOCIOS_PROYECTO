@@ -1,4 +1,4 @@
-from flask import Flask, redirect, url_for, flash
+from flask import Flask, redirect, url_for, flash, render_template
 from flask_login import current_user
 from app.extensions import db, login_manager, csrf, mail
 from app.config import DevelopmentConfig, ProductionConfig
@@ -39,7 +39,10 @@ def create_app(config_class=None):
     app.register_blueprint(product.product_bp, url_prefix='/product')
     app.register_blueprint(category.category_bp, url_prefix='/category')
     app.register_blueprint(review.review_bp, url_prefix='/review')
-    app.register_blueprint(order.order_bp, url_prefix='/order')
+    
+    # ✅ CORREGIDO: cambiar '/order' a '/orders'
+    app.register_blueprint(order.order_bp, url_prefix='/orders')
+    
     app.register_blueprint(favorite.favorite_bp, url_prefix='/favorite')
     app.register_blueprint(follower.follower_bp, url_prefix='/follower')
     app.register_blueprint(notification.notification_bp, url_prefix='/notification')
@@ -54,16 +57,19 @@ def create_app(config_class=None):
     
     @app.route('/')
     def index():
-        if current_user.is_authenticated:
-            from app.models.store import Store
-            store = Store.query.filter_by(user_id=current_user.id).first()
-            if store:
-                return redirect(url_for('store.dashboard', store_id=store.id))
-            else:
-                flash('Por favor crea tu tienda para comenzar.', 'info')
-                return redirect(url_for('store.create_store'))
-        else:
-            return redirect(url_for('auth.login'))
+        """Página principal - Landing page con productos"""
+        from app.models.product import Product
+        from app.models.category import Category
+        from app.models.store import Store
+        
+        products = Product.query.filter_by(is_active=True).limit(8).all()
+        categories = Category.query.all()
+        stores = Store.query.filter_by(is_active=True).all()
+        
+        return render_template('index.html', 
+                            products=products, 
+                            categories=categories, 
+                            stores=stores)
     
     with app.app_context():
         try:
