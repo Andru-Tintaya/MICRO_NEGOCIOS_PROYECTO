@@ -95,11 +95,10 @@
                 </div>
                 {% endif %}
                 
-                <!-- Botón WhatsApp directo -->
-                <a href="https://wa.me/{{ product.store.whatsapp.replace('+', '') }}?text=Hola%2C%20me%20interesa%20{{ product.name|urlencode }}" 
-                   class="btn-whatsapp-direct" target="_blank">
+                <!-- ✅ BOTÓN DE WHATSAPP MODIFICADO -->
+                <button class="btn-whatsapp-direct" onclick="sendWhatsApp()">
                     <i class="fab fa-whatsapp"></i> Contactar por WhatsApp
-                </a>
+                </button>
             </div>
         </div>
         
@@ -436,6 +435,9 @@
     text-decoration: none;
     font-weight: 600;
     transition: all 0.3s;
+    border: none;
+    cursor: pointer;
+    font-size: 1rem;
 }
 
 .btn-whatsapp-direct:hover {
@@ -752,6 +754,39 @@
         for (let i = 0; i < quantity; i++) {
             addToCart(productId, name, price, image, storeId);
         }
+    }
+    
+    // ============================================
+    // ENVIAR PEDIDO POR WHATSAPP CON CANTIDAD
+    // ============================================
+    function sendWhatsApp() {
+        // Obtener la cantidad seleccionada
+        const quantityInput = document.getElementById('quantity');
+        let quantity = parseInt(quantityInput.value) || 1;
+        
+        // Validar cantidad
+        const maxStock = parseInt(quantityInput.max);
+        if (quantity < 1) quantity = 1;
+        if (quantity > maxStock) quantity = maxStock;
+        
+        // Datos del producto y tienda
+        const productName = '{{ product.name }}';
+        const price = {{ product.get_price_with_discount() }};
+        const storeName = '{{ product.store.name }}';
+        const storeWhatsapp = '{{ product.store.whatsapp }}';
+        
+        // Calcular subtotal y total
+        const subtotal = price * quantity;
+        const total = subtotal; // Si hay envío o descuento, se puede ajustar aquí
+        
+        // Construir mensaje
+        const message = `Hola, estoy interesado/a en realizar el siguiente pedido:%0A%0A🛒 *Pedido en: ${storeName}*%0A- ${quantity}x ${productName} → Bs. ${subtotal.toFixed(2)}%0A%0A*Total: Bs. ${total.toFixed(2)}*`;
+        
+        // Construir URL de WhatsApp
+        const url = `https://wa.me/${storeWhatsapp.replace('+', '')}?text=${message}`;
+        
+        // Abrir en nueva ventana
+        window.open(url, '_blank');
     }
     
     // ============================================
