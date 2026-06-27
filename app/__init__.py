@@ -1,6 +1,6 @@
 from flask import Flask, redirect, url_for, flash, render_template
 from flask_login import current_user
-from flask_wtf.csrf import CSRFError  # ← AGREGAR ESTA IMPORTACIÓN
+from flask_wtf.csrf import CSRFError
 from app.extensions import db, login_manager, csrf, mail
 from app.config import DevelopmentConfig, ProductionConfig
 import os
@@ -25,7 +25,6 @@ def create_app(config_class=None):
     csrf.init_app(app)
     mail.init_app(app)
     
-    # ✅ MANEJADOR DE ERRORES CSRF (AGREGAR ESTO)
     @app.errorhandler(CSRFError)
     def handle_csrf_error(e):
         flash('El token de seguridad ha expirado. Por favor, recarga la página.', 'error')
@@ -61,7 +60,6 @@ def create_app(config_class=None):
     
     @app.route('/')
     def index():
-        """Página principal - Landing page con productos"""
         from app.models.product import Product
         from app.models.category import Category
         from app.models.store import Store
@@ -77,13 +75,26 @@ def create_app(config_class=None):
     
     with app.app_context():
         try:
+            # Crear carpeta instance
             instance_path = os.path.join(app.instance_path)
             if not os.path.exists(instance_path):
                 os.makedirs(instance_path)
             
+            # ✅ CREAR CARPETA UPLOADS
+            upload_path = os.path.join(app.static_folder, 'uploads')
+            if not os.path.exists(upload_path):
+                os.makedirs(upload_path, exist_ok=True)
+                print(f"✅ Carpeta uploads creada: {upload_path}")
+            
+            # ✅ CREAR CARPETA PRODUCTS
+            products_path = os.path.join(upload_path, 'products')
+            if not os.path.exists(products_path):
+                os.makedirs(products_path, exist_ok=True)
+                print(f"✅ Carpeta products creada: {products_path}")
+            
             db.create_all()
             print("✅ Base de datos inicializada correctamente")
         except Exception as e:
-            print(f"❌ Error al crear la base de datos: {e}")
+            print(f"❌ Error al crear carpetas/base de datos: {e}")
     
     return app
