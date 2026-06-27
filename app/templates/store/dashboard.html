@@ -5,7 +5,7 @@
 {% block content %}
 <div class="dashboard-container">
     <!-- Sidebar -->
-    <aside class="dashboard-sidebar">
+    <aside class="dashboard-sidebar" id="sidebar">
         <div class="sidebar-header">
             {% if store.logo_url %}
             <img src="{{ store.logo_url }}" alt="{{ store.name }}" class="store-logo">
@@ -17,6 +17,10 @@
             <span class="store-status {% if store.is_active %}active{% else %}inactive{% endif %}">
                 {{ 'Activo' if store.is_active else 'Inactivo' }}
             </span>
+            <!-- Botón cerrar sidebar en móvil -->
+            <button class="sidebar-close" onclick="toggleSidebar()">
+                <i class="fas fa-times"></i>
+            </button>
         </div>
         
         <nav class="sidebar-nav">
@@ -24,7 +28,7 @@
                 <i class="fas fa-box"></i> Productos
                 <span class="badge">{{ products|length }}</span>
             </a>
-            <a href="#" class="nav-item" data-section="orders">
+            <a href="{{ url_for('order.list') }}" class="nav-item">
                 <i class="fas fa-shopping-bag"></i> Pedidos
                 <span class="badge">0</span>
             </a>
@@ -53,10 +57,14 @@
             <h1>Panel de Control</h1>
             <div class="dash-user">
                 <span>Bienvenido, <strong>{{ session.full_name }}</strong></span>
+                <!-- Botón abrir sidebar en móvil -->
+                <button class="sidebar-open" onclick="toggleSidebar()">
+                    <i class="fas fa-bars"></i>
+                </button>
             </div>
         </header>
         
-        <!-- Stats Cards -->
+        <!-- Stats Cards (sin seguidores) -->
         <div class="stats-grid">
             <div class="stat-card">
                 <div class="stat-icon" style="background: #E8F5E9;">
@@ -72,8 +80,10 @@
                     <i class="fas fa-shopping-bag" style="color: #1565C0;"></i>
                 </div>
                 <div class="stat-info">
-                    <h3>0</h3>
-                    <p>Pedidos Totales</p>
+                    <a href="{{ url_for('order.list') }}" style="text-decoration: none; color: inherit;">
+                        <h3>0</h3>
+                        <p>Pedidos Totales</p>
+                    </a>
                 </div>
             </div>
             <div class="stat-card">
@@ -83,15 +93,6 @@
                 <div class="stat-info">
                     <h3>{{ "%.1f"|format(store.rating_avg) if store.rating_avg else 0 }}</h3>
                     <p>Calificación Promedio</p>
-                </div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-icon" style="background: #FCE4EC;">
-                    <i class="fas fa-users" style="color: #C62828;"></i>
-                </div>
-                <div class="stat-info">
-                    <h3>{{ store.followers_count }}</h3>
-                    <p>Seguidores</p>
                 </div>
             </div>
         </div>
@@ -172,39 +173,46 @@
             </div>
         </section>
         
+        <!-- Orders Section (redireccionada) -->
         <section id="orders" class="content-section">
-            <h2>Pedidos Recibidos</h2>
-            <div class="empty-state">
-                <i class="fas fa-shopping-bag"></i>
-                <h3>No hay pedidos aún</h3>
-                <p>Los pedidos aparecerán aquí cuando los clientes compren tus productos</p>
+            <h2>📦 Pedidos Recibidos</h2>
+            <div style="text-align: center; padding: 30px 20px; background: #F8FAFC; border-radius: 12px;">
+                <i class="fas fa-shopping-bag" style="font-size: 2.5rem; color: #10B981; margin-bottom: 12px;"></i>
+                <p style="color: #64748B; max-width: 400px; margin: 0 auto 12px;">Gestiona todos los pedidos de tu tienda</p>
+                <a href="{{ url_for('order.list') }}" class="btn-primary" style="display: inline-block; padding: 10px 24px;">
+                    <i class="fas fa-arrow-right"></i> Ver todos los pedidos
+                </a>
             </div>
         </section>
         
+        <!-- Reviews Section -->
         <section id="reviews" class="content-section">
-            <h2>Reseñas de Clientes</h2>
-            <div class="empty-state">
-                <i class="fas fa-star"></i>
-                <h3>Sin reseñas aún</h3>
-                <p>Los clientes calificarán tus productos aquí</p>
+            <h2>⭐ Reseñas de Clientes</h2>
+            <div style="text-align: center; padding: 30px 20px; background: #F8FAFC; border-radius: 12px;">
+                <i class="fas fa-star" style="font-size: 2.5rem; color: #F59E0B; margin-bottom: 12px;"></i>
+                <p style="color: #64748B; max-width: 400px; margin: 0 auto 12px;">Visualiza y responde a las reseñas de tus clientes</p>
+                <a href="#" class="btn-primary" style="display: inline-block; padding: 10px 24px; background: #F59E0B;">
+                    <i class="fas fa-arrow-right"></i> Ver reseñas
+                </a>
             </div>
         </section>
         
+        <!-- Stats Section -->
         <section id="stats" class="content-section">
-            <h2>Estadísticas</h2>
-            <div class="stats-charts">
-                <div class="chart-container">
-                    <h3>Ventas por Mes</h3>
-                    <canvas id="salesChart"></canvas>
-                </div>
-                <div class="chart-container">
-                    <h3>Productos Más Vendidos</h3>
-                    <canvas id="topProductsChart"></canvas>
-                </div>
+            <h2>📊 Estadísticas</h2>
+            <div style="text-align: center; padding: 30px 20px; background: #F8FAFC; border-radius: 12px;">
+                <i class="fas fa-chart-line" style="font-size: 2.5rem; color: #3B82F6; margin-bottom: 12px;"></i>
+                <p style="color: #64748B; max-width: 400px; margin: 0 auto 12px;">Analiza el rendimiento de tu tienda</p>
+                <a href="#" class="btn-primary" style="display: inline-block; padding: 10px 24px; background: #3B82F6;">
+                    <i class="fas fa-arrow-right"></i> Ver estadísticas
+                </a>
             </div>
         </section>
     </main>
 </div>
+
+<!-- Overlay para móvil -->
+<div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
 
 <!-- Modal para productos -->
 <div id="productModal" class="modal">
@@ -259,7 +267,7 @@
                 <textarea id="productDesc" class="form-control" rows="3"></textarea>
             </div>
             
-            <!-- ✅ ÁREA DE SUBIDA DE IMÁGENES (SIMPLE Y FUNCIONAL) -->
+            <!-- ✅ ÁREA DE SUBIDA DE IMÁGENES (NO TOCAR) -->
             <div class="form-group">
                 <label>Imagen Principal</label>
                 <div id="imagePreviewContainer" style="margin-bottom: 10px;">
@@ -287,10 +295,119 @@
         </form>
     </div>
 </div>
-{% endblock %}
+
+<style>
+/* ✅ Sidebar responsive */
+.dashboard-sidebar {
+    transition: transform 0.3s ease;
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    overflow-y: auto;
+}
+
+.sidebar-close,
+.sidebar-open {
+    display: none;
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: white;
+}
+
+.sidebar-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.5);
+    z-index: 999;
+}
+
+.sidebar-overlay.active {
+    display: block;
+}
+
+@media (max-width: 768px) {
+    .dashboard-sidebar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        height: 100vh;
+        width: 280px;
+        transform: translateX(-100%);
+        z-index: 1000;
+        background: #0F172A;
+        padding-top: 20px;
+        border-radius: 0;
+    }
+    
+    .dashboard-sidebar.open {
+        transform: translateX(0);
+    }
+    
+    .sidebar-close,
+    .sidebar-open {
+        display: block !important;
+    }
+    
+    .sidebar-close {
+        position: absolute;
+        top: 10px;
+        right: 15px;
+    }
+    
+    .sidebar-header {
+        padding-right: 45px;
+    }
+    
+    .dashboard-content {
+        padding: 16px !important;
+        width: 100%;
+    }
+    
+    .stats-grid {
+        grid-template-columns: 1fr 1fr !important;
+        gap: 12px !important;
+    }
+    
+    .products-grid {
+        grid-template-columns: 1fr !important;
+    }
+    
+    .dash-header {
+        flex-wrap: wrap;
+    }
+    
+    .dash-user {
+        width: 100%;
+        justify-content: space-between;
+    }
+}
+</style>
 
 {% block extra_js %}
 <script>
+    // ============================================
+    // TOGGLE SIDEBAR EN MÓVIL
+    // ============================================
+    function toggleSidebar() {
+        const sidebar = document.getElementById('sidebar');
+        const overlay = document.getElementById('sidebarOverlay');
+        sidebar.classList.toggle('open');
+        overlay.classList.toggle('active');
+    }
+    
+    function closeSidebar() {
+        const sidebar = document.getElementById('sidebar');
+        const overlay = document.getElementById('sidebarOverlay');
+        sidebar.classList.remove('open');
+        overlay.classList.remove('active');
+    }
+    
     // ============================================
     // VARIABLES GLOBALES
     // ============================================
@@ -304,18 +421,13 @@
         console.log('🚀 Dashboard inicializado');
         console.log('🏪 Store ID:', currentStoreId);
         
-        // ✅ PREVISUALIZACIÓN DE IMAGEN
         setupImagePreview();
-        
-        // ✅ NAVEGACIÓN DEL SIDEBAR
         setupSidebarNavigation();
-        
-        // ✅ CIERRE DEL MODAL
         setupModalClose();
     });
     
     // ============================================
-    // PREVISUALIZACIÓN DE IMAGEN
+    // PREVISUALIZACIÓN DE IMAGEN (NO TOCAR)
     // ============================================
     function setupImagePreview() {
         const fileInput = document.getElementById('productImage');
@@ -347,7 +459,6 @@
         document.getElementById('modalTitle').textContent = 'Nuevo Producto';
         document.getElementById('productForm').reset();
         
-        // Limpiar imagen
         const preview = document.getElementById('imagePreview');
         const container = document.getElementById('imagePreviewContainer');
         const fileInput = document.getElementById('productImage');
@@ -385,7 +496,6 @@
                     document.getElementById('productFeatured').checked = p.is_featured || false;
                     document.getElementById('productActive').checked = p.is_active !== false;
                     
-                    // Mostrar imagen si existe
                     const preview = document.getElementById('imagePreview');
                     const container = document.getElementById('imagePreviewContainer');
                     if (p.image_url && preview) {
@@ -419,22 +529,20 @@
             return;
         }
         
-        fetch(`/api/products/${productId}`, { 
-            method: 'DELETE'
-        })
-        .then(res => res.json())
-        .then(data => {
-            if (data.success) {
-                console.log('✅ Producto eliminado');
-                location.reload();
-            } else {
-                alert('Error: ' + (data.error || 'Desconocido'));
-            }
-        })
-        .catch(error => {
-            console.error('❌ Error:', error);
-            alert('Error de conexión al eliminar el producto');
-        });
+        fetch(`/api/products/${productId}`, { method: 'DELETE' })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    console.log('✅ Producto eliminado');
+                    location.reload();
+                } else {
+                    alert('Error: ' + (data.error || 'Desconocido'));
+                }
+            })
+            .catch(error => {
+                console.error('❌ Error:', error);
+                alert('Error de conexión al eliminar el producto');
+            });
     }
     
     // ============================================
