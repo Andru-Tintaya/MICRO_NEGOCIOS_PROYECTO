@@ -79,7 +79,6 @@
                                      alt="{{ user.full_name }}" class="user-avatar">
                                 <div>
                                     <strong>{{ user.full_name }}</strong>
-                                    <!-- ✅ CORREGIDO: Convertir UUID a string y mostrar los primeros 8 caracteres -->
                                     <small>{{ user.id.hex[:8] }}...</small>
                                 </div>
                             </div>
@@ -99,6 +98,7 @@
                         <td>{{ user.created_at.strftime('%d/%m/%Y') }}</td>
                         <td>
                             <div class="action-buttons">
+                                <!-- Activar/Desactivar -->
                                 <form method="POST" action="{{ url_for('admin.toggle_user', user_id=user.id) }}" style="display: inline;">
                                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                     <button type="submit" class="btn-toggle" title="{% if user.is_active %}Desactivar{% else %}Activar{% endif %}">
@@ -106,6 +106,7 @@
                                     </button>
                                 </form>
 
+                                <!-- Cambiar Rol -->
                                 <form method="POST" action="{{ url_for('admin.change_role', user_id=user.id) }}" style="display: inline;">
                                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                     <select name="role" onchange="this.form.submit()" class="role-select">
@@ -114,6 +115,23 @@
                                         <option value="admin" {% if user.role == 'admin' %}selected{% endif %}>Admin</option>
                                     </select>
                                 </form>
+
+                                <!-- ✅ Restablecer Contraseña -->
+                                <a href="{{ url_for('admin.reset_password', user_id=user.id) }}" class="btn-password" title="Restablecer contraseña">
+                                    <i class="fas fa-key"></i>
+                                </a>
+
+                                <!-- ✅ Eliminar Usuario (solo si no es el admin actual) -->
+                                {% if user.id != current_user.id %}
+                                <form method="POST" action="{{ url_for('admin.delete_user', user_id=user.id) }}" 
+                                      style="display: inline;" 
+                                      onsubmit="return confirm('¿Estás seguro de eliminar a {{ user.full_name }}? Esta acción no se puede deshacer.')">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <button type="submit" class="btn-delete-user" title="Eliminar usuario">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </form>
+                                {% endif %}
                             </div>
                         </td>
                     </tr>
@@ -190,6 +208,33 @@
 .btn-toggle { padding: 6px 12px; border: none; border-radius: 6px; cursor: pointer; background: #E2E8F0; color: #64748B; transition: all 0.3s; }
 .btn-toggle:hover { background: #CBD5E1; }
 .role-select { padding: 6px 8px; border: 1px solid #E2E8F0; border-radius: 6px; background: white; cursor: pointer; font-size: 0.85rem; }
+
+/* ✅ Botón para restablecer contraseña */
+.btn-password {
+    padding: 6px 10px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    background: #3B82F6;
+    color: white;
+    text-decoration: none;
+    display: inline-block;
+    transition: all 0.3s;
+}
+.btn-password:hover { background: #2563EB; }
+
+/* ✅ Botón para eliminar usuario */
+.btn-delete-user {
+    padding: 6px 10px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    background: #EF4444;
+    color: white;
+    transition: all 0.3s;
+}
+.btn-delete-user:hover { background: #DC2626; }
+
 .empty-row { text-align: center; color: #94A3B8; padding: 40px !important; }
 .pagination { display: flex; justify-content: center; gap: 8px; margin-top: 24px; flex-wrap: wrap; }
 .pagination a, .pagination .dots { padding: 8px 16px; border-radius: 8px; text-decoration: none; color: #64748B; transition: all 0.3s; }
