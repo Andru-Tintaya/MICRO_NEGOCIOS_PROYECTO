@@ -264,15 +264,68 @@
                 <textarea id="productDesc" class="form-control" rows="3"></textarea>
             </div>
             
+            <!-- ============================================ -->
+            <!-- ✅ NUEVA ÁREA DE SUBIDA CON <label>          -->
+            <!-- ============================================ -->
             <div class="form-group">
                 <label>Imagen Principal</label>
-                <div class="image-upload" id="imageUpload">
-                    <i class="fas fa-cloud-upload-alt"></i>
-                    <p>Haz clic o arrastra una imagen aquí</p>
-                    <input type="file" id="productImage" accept="image/*">
-                    <img id="imagePreview" style="display: none; max-width: 200px; margin-top: 10px; border-radius: 8px;">
-                </div>
+                
+                <label class="image-upload" id="imageUpload" for="productImage"
+                       style="display: flex; flex-direction: column; align-items: center; justify-content: center;
+                              border: 2px dashed #E2E8F0; padding: 30px 20px; border-radius: 12px;
+                              cursor: pointer !important; transition: all 0.3s ease;
+                              background: #F8FAFC; min-height: 120px;
+                              position: relative; z-index: 99999; pointer-events: auto !important;
+                              width: 100%;">
+                    
+                    <i class="fas fa-cloud-upload-alt" style="font-size: 2.5rem; color: #10B981; margin-bottom: 8px; pointer-events: none;"></i>
+                    <p style="color: #64748B; margin: 0; font-size: 0.95rem; pointer-events: none;">
+                        Haz clic o arrastra una imagen aquí
+                    </p>
+                    
+                    <input type="file" id="productImage" name="image" accept="image/*" 
+                           style="display: none;" 
+                           onchange="handleProductImageChange(this);">
+                    
+                    <div id="imagePreviewContainer" style="display: none; margin-top: 10px; width: 100%; text-align: center;">
+                        <img id="imagePreview" style="max-width: 200px; border-radius: 8px; border: 1px solid #ddd; padding: 4px; background: white;">
+                        <br>
+                        <button type="button" onclick="removeImage()" 
+                                style="margin-top: 8px; background: #ef4444; color: white; border: none; padding: 4px 12px; border-radius: 4px; cursor: pointer; font-size: 0.8rem;">
+                            ✕ Eliminar imagen
+                        </button>
+                    </div>
+                </label>
             </div>
+            
+            <style>
+                /* ✅ Forzar que el área de subida sea interactiva */
+                .image-upload {
+                    pointer-events: auto !important;
+                    cursor: pointer !important;
+                    user-select: none;
+                }
+                
+                .image-upload * {
+                    pointer-events: none !important;
+                }
+                
+                .image-upload input[type="file"] {
+                    display: none !important;
+                    pointer-events: none !important;
+                }
+                
+                .image-upload.dragover {
+                    border-color: #10B981 !important;
+                    background: #D1FAE5 !important;
+                }
+                
+                .image-upload:hover {
+                    border-color: #10B981 !important;
+                    background: #ECFDF5 !important;
+                }
+            </style>
+            <!-- ============================================ -->
             
             <div class="form-group checkbox">
                 <label>
@@ -303,110 +356,41 @@
     let currentStoreId = '{{ store.id }}';
     
     // ============================================
-    // INICIALIZAR AL CARGAR LA PÁGINA
+    // FUNCIÓN PARA MANEJAR LA IMAGEN SELECCIONADA
     // ============================================
-    document.addEventListener('DOMContentLoaded', function() {
-        console.log('🚀 Dashboard inicializado');
-        console.log('🏪 Store ID:', currentStoreId);
+    function handleProductImageChange(input) {
+        console.log('📷 handleProductImageChange llamado');
         
-        // ✅ CONFIGURAR SUBIDA DE IMÁGENES
-        setupImageUpload();
-        
-        // ✅ CONFIGURAR NAVEGACIÓN DEL SIDEBAR
-        setupSidebarNavigation();
-        
-        // ✅ CONFIGURAR CIERRE DEL MODAL
-        setupModalClose();
-    });
-    
-    // ============================================
-    // CONFIGURAR SUBIDA DE IMÁGENES
-    // ============================================
-    function setupImageUpload() {
-        const imageUpload = document.getElementById('imageUpload');
-        const productImage = document.getElementById('productImage');
-        
-        if (!imageUpload || !productImage) {
-            console.warn('⚠️ Elementos de subida de imágenes no encontrados');
+        if (!input || !input.files || input.files.length === 0) {
+            console.log('⚠️ No se seleccionó ningún archivo');
             return;
         }
         
-        console.log('✅ Configurando subida de imágenes');
+        const file = input.files[0];
+        console.log('📷 Archivo seleccionado:', file.name, file.type, file.size);
         
-        // ✅ CLIC EN EL ÁREA DE SUBIDA
-        imageUpload.addEventListener('click', function(e) {
-            e.preventDefault();
-            e.stopPropagation();
-            console.log('🖱️ Clic en área de subida');
-            productImage.click();
-        });
-        
-        // ✅ ARRASTRAR Y SOLTAR
-        imageUpload.addEventListener('dragover', function(e) {
-            e.preventDefault();
-            this.style.borderColor = '#10B981';
-            this.style.background = '#ECFDF5';
-        });
-        
-        imageUpload.addEventListener('dragleave', function(e) {
-            e.preventDefault();
-            this.style.borderColor = '#E2E8F0';
-            this.style.background = '#F8FAFC';
-        });
-        
-        imageUpload.addEventListener('drop', function(e) {
-            e.preventDefault();
-            this.style.borderColor = '#E2E8F0';
-            this.style.background = '#F8FAFC';
-            
-            const files = e.dataTransfer.files;
-            if (files.length > 0) {
-                productImage.files = files;
-                handleImageFile(files[0]);
-            }
-        });
-        
-        // ✅ SELECCIÓN DE ARCHIVO
-        productImage.addEventListener('change', function(e) {
-            console.log('📷 Archivo seleccionado:', this.files.length);
-            if (this.files.length > 0) {
-                handleImageFile(this.files[0]);
-            }
-        });
-        
-        // ✅ CLIC EN EL BOTÓN DE ELIMINAR IMAGEN
-        const removeBtn = document.getElementById('removeImageBtn');
-        if (removeBtn) {
-            removeBtn.addEventListener('click', function(e) {
-                e.preventDefault();
-                removeImage();
-            });
-        }
-    }
-    
-    // ============================================
-    // MANEJAR ARCHIVO DE IMAGEN
-    // ============================================
-    function handleImageFile(file) {
-        console.log('📷 Procesando archivo:', file.name, file.type, file.size);
-        
+        // Validar que sea una imagen
         if (!file.type.startsWith('image/')) {
             alert('Por favor, selecciona una imagen válida.');
+            input.value = '';
             return;
         }
         
-        // Limitar tamaño (5MB)
+        // Validar tamaño (5MB máximo)
         if (file.size > 5 * 1024 * 1024) {
             alert('La imagen es demasiado grande. Máximo 5MB.');
+            input.value = '';
             return;
         }
         
+        // Mostrar previsualización
         const reader = new FileReader();
-        reader.onload = function(ev) {
+        reader.onload = function(e) {
             const preview = document.getElementById('imagePreview');
-            if (preview) {
-                preview.src = ev.target.result;
-                preview.style.display = 'block';
+            const container = document.getElementById('imagePreviewContainer');
+            if (preview && container) {
+                preview.src = e.target.result;
+                container.style.display = 'block';
                 console.log('✅ Imagen cargada para previsualización');
             }
         };
@@ -417,15 +401,18 @@
     // ELIMINAR IMAGEN SELECCIONADA
     // ============================================
     function removeImage() {
-        const productImage = document.getElementById('productImage');
-        const imagePreview = document.getElementById('imagePreview');
+        const fileInput = document.getElementById('productImage');
+        const preview = document.getElementById('imagePreview');
+        const container = document.getElementById('imagePreviewContainer');
         
-        if (productImage) {
-            productImage.value = '';
+        if (fileInput) {
+            fileInput.value = '';
         }
-        if (imagePreview) {
-            imagePreview.src = '';
-            imagePreview.style.display = 'none';
+        if (preview) {
+            preview.src = '';
+        }
+        if (container) {
+            container.style.display = 'none';
         }
         console.log('🗑️ Imagen eliminada');
     }
@@ -472,12 +459,13 @@
                     
                     // ✅ Mostrar imagen si existe
                     const preview = document.getElementById('imagePreview');
-                    if (p.image_url && preview) {
+                    const container = document.getElementById('imagePreviewContainer');
+                    if (p.image_url && preview && container) {
                         preview.src = p.image_url;
-                        preview.style.display = 'block';
+                        container.style.display = 'block';
                         console.log('✅ Imagen cargada:', p.image_url);
-                    } else if (preview) {
-                        preview.style.display = 'none';
+                    } else if (container) {
+                        container.style.display = 'none';
                     }
                 } else {
                     alert('Error al cargar el producto: ' + (data.error || 'Desconocido'));
@@ -545,7 +533,6 @@
         formData.append('is_featured', document.getElementById('productFeatured').checked ? 'on' : 'off');
         formData.append('is_active', document.getElementById('productActive')?.checked ? 'on' : 'off');
         
-        // ✅ Agregar imagen si existe
         const fileInput = document.getElementById('productImage');
         if (fileInput.files && fileInput.files[0]) {
             formData.append('image', fileInput.files[0]);
@@ -564,7 +551,6 @@
             const response = await fetch(url, {
                 method: method,
                 body: formData
-                // ✅ NO poner headers 'Content-Type' porque FormData lo maneja automáticamente
             });
             
             const result = await response.json();
@@ -585,33 +571,37 @@
     // ============================================
     // NAVEGACIÓN DEL SIDEBAR
     // ============================================
-    function setupSidebarNavigation() {
-        document.querySelectorAll('.nav-item[data-section]').forEach(item => {
-            item.addEventListener('click', function(e) {
-                e.preventDefault();
-                document.querySelectorAll('.nav-item[data-section]').forEach(n => n.classList.remove('active'));
-                document.querySelectorAll('.content-section').forEach(s => s.classList.remove('active'));
-                
-                this.classList.add('active');
-                const sectionId = this.dataset.section;
-                const section = document.getElementById(sectionId);
-                if (section) {
-                    section.classList.add('active');
-                }
-            });
+    document.querySelectorAll('.nav-item[data-section]').forEach(item => {
+        item.addEventListener('click', function(e) {
+            e.preventDefault();
+            document.querySelectorAll('.nav-item[data-section]').forEach(n => n.classList.remove('active'));
+            document.querySelectorAll('.content-section').forEach(s => s.classList.remove('active'));
+            
+            this.classList.add('active');
+            const sectionId = this.dataset.section;
+            const section = document.getElementById(sectionId);
+            if (section) {
+                section.classList.add('active');
+            }
         });
-    }
+    });
     
     // ============================================
     // CERRAR MODAL AL HACER CLIC FUERA
     // ============================================
-    function setupModalClose() {
-        window.onclick = function(event) {
-            const modal = document.getElementById('productModal');
-            if (event.target === modal) {
-                closeProductModal();
-            }
-        };
-    }
+    window.onclick = function(event) {
+        const modal = document.getElementById('productModal');
+        if (event.target === modal) {
+            closeProductModal();
+        }
+    };
+    
+    // ============================================
+    // INICIALIZAR
+    // ============================================
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log('🚀 Dashboard inicializado');
+        console.log('🏪 Store ID:', currentStoreId);
+    });
 </script>
 {% endblock %}
