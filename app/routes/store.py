@@ -40,7 +40,7 @@ def create_store():
             whatsapp = request.form.get('whatsapp')
             city = request.form.get('city')
             address = request.form.get('address')
-            category_id = request.form.get('category_id')
+            category_id = request.form.get('category_id') or None
             
             if not all([name, whatsapp, city]):
                 flash('Nombre, WhatsApp y ciudad son obligatorios.', 'error')
@@ -152,7 +152,7 @@ def edit_store():
             store.whatsapp = request.form.get('whatsapp', store.whatsapp)
             store.city = request.form.get('city', store.city)
             store.address = request.form.get('address', store.address)
-            store.category_id = request.form.get('category_id', store.category_id)
+            store.category_id = request.form.get('category_id', store.category_id) or None
             
             if 'logo' in request.files:
                 file = request.files['logo']
