@@ -49,7 +49,6 @@
     
     <!-- Main Content -->
     <main class="dashboard-content">
-        <!-- Header -->
         <header class="dash-header">
             <h1>Panel de Control</h1>
             <div class="dash-user">
@@ -106,7 +105,6 @@
                 </button>
             </div>
             
-            <!-- Productos con stock bajo -->
             {% if low_stock_products %}
             <div class="alert-warning">
                 <i class="fas fa-exclamation-triangle"></i>
@@ -174,7 +172,6 @@
             </div>
         </section>
         
-        <!-- Orders Section -->
         <section id="orders" class="content-section">
             <h2>Pedidos Recibidos</h2>
             <div class="empty-state">
@@ -184,7 +181,6 @@
             </div>
         </section>
         
-        <!-- Reviews Section -->
         <section id="reviews" class="content-section">
             <h2>Reseñas de Clientes</h2>
             <div class="empty-state">
@@ -194,7 +190,6 @@
             </div>
         </section>
         
-        <!-- Stats Section -->
         <section id="stats" class="content-section">
             <h2>Estadísticas</h2>
             <div class="stats-charts">
@@ -264,26 +259,25 @@
                 <textarea id="productDesc" class="form-control" rows="3"></textarea>
             </div>
             
-            <!-- ÁREA DE SUBIDA DE IMÁGENES -->
+            <!-- ✅ ÁREA DE SUBIDA DE IMÁGENES (SIMPLE Y FUNCIONAL) -->
             <div class="form-group">
                 <label>Imagen Principal</label>
-                <div class="image-upload" id="imageUpload">
-                    <i class="fas fa-cloud-upload-alt"></i>
-                    <p>Haz clic o arrastra una imagen aquí</p>
-                    <input type="file" id="productImage" accept="image/*">
-                    <img id="imagePreview" style="display: none; max-width: 200px; margin-top: 10px; border-radius: 8px;">
+                <div id="imagePreviewContainer" style="margin-bottom: 10px;">
+                    <img id="imagePreview" style="display: none; max-width: 200px; border-radius: 8px; border: 1px solid #ddd; padding: 4px;">
                 </div>
+                <input type="file" id="productImage" name="image" class="form-control" accept="image/*">
+                <small class="text-muted">Formatos: PNG, JPG, JPEG, GIF, WEBP (máx 5MB)</small>
             </div>
             
             <div class="form-group checkbox">
                 <label>
-                    <input type="checkbox" id="productFeatured"> Producto Destacado
+                    <input type="checkbox" id="productFeatured" name="is_featured"> Producto Destacado
                 </label>
             </div>
             
             <div class="form-group checkbox">
                 <label>
-                    <input type="checkbox" id="productActive" checked> Producto Activo
+                    <input type="checkbox" id="productActive" name="is_active" checked> Producto Activo
                 </label>
             </div>
             
@@ -304,131 +298,45 @@
     let currentStoreId = '{{ store.id }}';
     
     // ============================================
-    // INICIALIZAR AL CARGAR LA PÁGINA
+    // INICIALIZAR
     // ============================================
     document.addEventListener('DOMContentLoaded', function() {
         console.log('🚀 Dashboard inicializado');
         console.log('🏪 Store ID:', currentStoreId);
         
-        // ✅ CONFIGURAR SUBIDA DE IMÁGENES
-        setupImageUpload();
+        // ✅ PREVISUALIZACIÓN DE IMAGEN
+        setupImagePreview();
         
-        // ✅ CONFIGURAR NAVEGACIÓN DEL SIDEBAR
+        // ✅ NAVEGACIÓN DEL SIDEBAR
         setupSidebarNavigation();
         
-        // ✅ CONFIGURAR CIERRE DEL MODAL
+        // ✅ CIERRE DEL MODAL
         setupModalClose();
     });
     
     // ============================================
-    // CONFIGURAR SUBIDA DE IMÁGENES
+    // PREVISUALIZACIÓN DE IMAGEN
     // ============================================
-    function setupImageUpload() {
-        const imageUpload = document.getElementById('imageUpload');
-        const productImage = document.getElementById('productImage');
+    function setupImagePreview() {
+        const fileInput = document.getElementById('productImage');
+        if (!fileInput) return;
         
-        if (!imageUpload || !productImage) {
-            console.warn('⚠️ Elementos de subida de imágenes no encontrados');
-            return;
-        }
-        
-        console.log('✅ Configurando subida de imágenes');
-        
-        // ✅ CLIC EN EL ÁREA DE SUBIDA
-        imageUpload.addEventListener('click', function(e) {
-            e.preventDefault();
-            e.stopPropagation();
-            console.log('🖱️ Clic en área de subida');
-            productImage.click();
-        });
-        
-        // ✅ ARRASTRAR Y SOLTAR
-        imageUpload.addEventListener('dragover', function(e) {
-            e.preventDefault();
-            this.style.borderColor = '#10B981';
-            this.style.background = '#ECFDF5';
-        });
-        
-        imageUpload.addEventListener('dragleave', function(e) {
-            e.preventDefault();
-            this.style.borderColor = '#E2E8F0';
-            this.style.background = '#F8FAFC';
-        });
-        
-        imageUpload.addEventListener('drop', function(e) {
-            e.preventDefault();
-            this.style.borderColor = '#E2E8F0';
-            this.style.background = '#F8FAFC';
-            
-            const files = e.dataTransfer.files;
-            if (files.length > 0) {
-                productImage.files = files;
-                handleImageFile(files[0]);
+        fileInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(ev) {
+                    const preview = document.getElementById('imagePreview');
+                    const container = document.getElementById('imagePreviewContainer');
+                    if (preview && container) {
+                        preview.src = ev.target.result;
+                        container.style.display = 'block';
+                        console.log('✅ Imagen cargada para previsualización');
+                    }
+                };
+                reader.readAsDataURL(file);
             }
         });
-        
-        // ✅ SELECCIÓN DE ARCHIVO
-        productImage.addEventListener('change', function(e) {
-            console.log('📷 Archivo seleccionado:', this.files.length);
-            if (this.files.length > 0) {
-                handleImageFile(this.files[0]);
-            }
-        });
-        
-        // ✅ CLIC EN EL BOTÓN DE ELIMINAR IMAGEN
-        const removeBtn = document.getElementById('removeImageBtn');
-        if (removeBtn) {
-            removeBtn.addEventListener('click', function(e) {
-                e.preventDefault();
-                removeImage();
-            });
-        }
-    }
-    
-    // ============================================
-    // MANEJAR ARCHIVO DE IMAGEN
-    // ============================================
-    function handleImageFile(file) {
-        console.log('📷 Procesando archivo:', file.name, file.type, file.size);
-        
-        if (!file.type.startsWith('image/')) {
-            alert('Por favor, selecciona una imagen válida.');
-            return;
-        }
-        
-        // Limitar tamaño (5MB)
-        if (file.size > 5 * 1024 * 1024) {
-            alert('La imagen es demasiado grande. Máximo 5MB.');
-            return;
-        }
-        
-        const reader = new FileReader();
-        reader.onload = function(ev) {
-            const preview = document.getElementById('imagePreview');
-            if (preview) {
-                preview.src = ev.target.result;
-                preview.style.display = 'block';
-                console.log('✅ Imagen cargada para previsualización');
-            }
-        };
-        reader.readAsDataURL(file);
-    }
-    
-    // ============================================
-    // ELIMINAR IMAGEN SELECCIONADA
-    // ============================================
-    function removeImage() {
-        const productImage = document.getElementById('productImage');
-        const imagePreview = document.getElementById('imagePreview');
-        
-        if (productImage) {
-            productImage.value = '';
-        }
-        if (imagePreview) {
-            imagePreview.src = '';
-            imagePreview.style.display = 'none';
-        }
-        console.log('🗑️ Imagen eliminada');
     }
     
     // ============================================
@@ -439,8 +347,14 @@
         document.getElementById('modalTitle').textContent = 'Nuevo Producto';
         document.getElementById('productForm').reset();
         
-        // ✅ Limpiar imagen
-        removeImage();
+        // Limpiar imagen
+        const preview = document.getElementById('imagePreview');
+        const container = document.getElementById('imagePreviewContainer');
+        const fileInput = document.getElementById('productImage');
+        
+        if (preview) preview.src = '';
+        if (container) container.style.display = 'none';
+        if (fileInput) fileInput.value = '';
         
         document.getElementById('productModal').style.display = 'block';
         console.log('📦 Modal de nuevo producto abierto');
@@ -471,14 +385,13 @@
                     document.getElementById('productFeatured').checked = p.is_featured || false;
                     document.getElementById('productActive').checked = p.is_active !== false;
                     
-                    // ✅ Mostrar imagen si existe
+                    // Mostrar imagen si existe
                     const preview = document.getElementById('imagePreview');
+                    const container = document.getElementById('imagePreviewContainer');
                     if (p.image_url && preview) {
                         preview.src = p.image_url;
-                        preview.style.display = 'block';
+                        container.style.display = 'block';
                         console.log('✅ Imagen cargada:', p.image_url);
-                    } else if (preview) {
-                        preview.style.display = 'none';
                     }
                 } else {
                     alert('Error al cargar el producto: ' + (data.error || 'Desconocido'));
@@ -507,10 +420,7 @@
         }
         
         fetch(`/api/products/${productId}`, { 
-            method: 'DELETE',
-            headers: {
-                'X-CSRFToken': document.querySelector('meta[name="csrf-token"]')?.content || ''
-            }
+            method: 'DELETE'
         })
         .then(res => res.json())
         .then(data => {
@@ -544,32 +454,24 @@
         formData.append('category_id', document.getElementById('productCategory').value || '');
         formData.append('description', document.getElementById('productDesc').value || '');
         formData.append('is_featured', document.getElementById('productFeatured').checked ? 'on' : 'off');
-        formData.append('is_active', document.getElementById('productActive')?.checked ? 'on' : 'off');
+        formData.append('is_active', document.getElementById('productActive').checked ? 'on' : 'off');
         
-        // ✅ Agregar imagen si existe
         const fileInput = document.getElementById('productImage');
         if (fileInput.files && fileInput.files[0]) {
             formData.append('image', fileInput.files[0]);
             console.log('📷 Imagen adjunta:', fileInput.files[0].name);
-        } else {
-            console.log('⚠️ No hay imagen seleccionada');
         }
         
         const url = editProductId ? `/api/products/${editProductId}` : '/api/products';
         const method = editProductId ? 'PUT' : 'POST';
         
-        console.log('🔗 URL:', url);
-        console.log('📝 Method:', method);
-        
         try {
             const response = await fetch(url, {
                 method: method,
                 body: formData
-                // ✅ NO poner headers 'Content-Type' porque FormData lo maneja automáticamente
             });
             
             const result = await response.json();
-            console.log('📥 Respuesta:', result);
             
             if (result.success) {
                 alert('✅ Producto guardado con éxito');
