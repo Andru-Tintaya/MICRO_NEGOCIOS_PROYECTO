@@ -261,7 +261,10 @@ def update_product_api(product_id):
         price = request.form.get('price', product.price)
         description = request.form.get('description', product.description)
         stock = request.form.get('stock', product.stock)
-        category_id = request.form.get('category_id', product.category_id)
+        
+        # ✅ CORREGIDO: category_id vacío se convierte a None
+        category_id = request.form.get('category_id') or None
+        
         discount_price = request.form.get('discount_price')
         min_stock = request.form.get('min_stock', product.min_stock)
         is_active = request.form.get('is_active') == 'on'
@@ -271,13 +274,14 @@ def update_product_api(product_id):
         print(f"   - Nombre: {name}")
         print(f"   - Precio: {price}")
         print(f"   - Stock: {stock}")
+        print(f"   - Categoría: {category_id}")
         print(f"   - Activo: {is_active}")
         
         product.name = name
         product.price = float(price) if price else product.price
         product.description = description
         product.stock = int(stock) if stock else 0
-        product.category_id = category_id
+        product.category_id = category_id  # ✅ Ahora es None si está vacío
         product.is_active = is_active
         product.is_featured = is_featured
         
