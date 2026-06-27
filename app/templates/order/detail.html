@@ -101,9 +101,9 @@
             
             {% if current_user.is_vendor() and order.store.user_id == current_user.id %}
             <div class="status-update">
-                <!-- ✅ AGREGAR CSRF TOKEN AQUÍ -->
+                <!-- ✅ FORMULARIO CON CSRF COMO INPUT HIDDEN -->
                 <form method="POST" action="{{ url_for('order.update_status', order_id=order.id) }}">
-                    {{ csrf_token() }}
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <select name="status">
                         <option value="pendiente" {% if order.status == 'pendiente' %}selected{% endif %}>Pendiente</option>
                         <option value="confirmado" {% if order.status == 'confirmado' %}selected{% endif %}>Confirmado</option>
