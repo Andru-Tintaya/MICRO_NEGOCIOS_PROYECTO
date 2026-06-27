@@ -11,6 +11,9 @@ from datetime import datetime, timedelta
 
 admin_bp = Blueprint('admin', __name__)
 
+# ============================================
+# DASHBOARD
+# ============================================
 @admin_bp.route('/dashboard')
 @login_required
 @admin_required
@@ -54,6 +57,9 @@ def dashboard():
         top_products=top_products
     )
 
+# ============================================
+# GESTIÓN DE USUARIOS
+# ============================================
 @admin_bp.route('/users')
 @login_required
 @admin_required
@@ -87,6 +93,70 @@ def change_role(user_id):
     
     return redirect(url_for('admin.users'))
 
+# ✅ NUEVO: ELIMINAR USUARIO
+@admin_bp.route('/users/<user_id>/delete', methods=['POST'])
+@login_required
+@admin_required
+def delete_user(user_id):
+    """Eliminar usuario permanentemente (con confirmación)"""
+    user = User.query.get_or_404(user_id)
+    
+    # No permitir eliminar al propio admin
+    if user.id == current_user.id:
+        flash('No puedes eliminar tu propia cuenta', 'error')
+        return redirect(url_for('admin.users'))
+    
+    try:
+        # Eliminar relaciones primero (tiendas y productos)
+        stores = Store.query.filter_by(user_id=user.id).all()
+        for store in stores:
+            products = Product.query.filter_by(store_id=store.id).all()
+            for product in products:
+                db.session.delete(product)
+            db.session.delete(store)
+        
+        db.session.delete(user)
+        db.session.commit()
+        flash(f'Usuario {user.full_name} eliminado permanentemente', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error al eliminar usuario: {str(e)}', 'error')
+    
+    return redirect(url_for('admin.users'))
+
+# ✅ NUEVO: RESTABLECER CONTRASEÑA
+@admin_bp.route('/users/<user_id>/reset-password', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def reset_password(user_id):
+    """Restablecer contraseña de un usuario"""
+    user = User.query.get_or_404(user_id)
+    
+    if request.method == 'POST':
+        new_password = request.form.get('new_password')
+        confirm_password = request.form.get('confirm_password')
+        
+        if not new_password or len(new_password) < 8:
+            flash('La contraseña debe tener al menos 8 caracteres', 'error')
+            return render_template('admin/reset_password.html', user=user)
+        
+        if new_password != confirm_password:
+            flash('Las contraseñas no coinciden', 'error')
+            return render_template('admin/reset_password.html', user=user)
+        
+        # Actualizar contraseña
+        from werkzeug.security import generate_password_hash
+        user.password_hash = generate_password_hash(new_password)
+        db.session.commit()
+        
+        flash(f'Contraseña de {user.full_name} restablecida exitosamente', 'success')
+        return redirect(url_for('admin.users'))
+    
+    return render_template('admin/reset_password.html', user=user)
+
+# ============================================
+# GESTIÓN DE TIENDAS
+# ============================================
 @admin_bp.route('/stores')
 @login_required
 @admin_required
@@ -105,8 +175,44 @@ def toggle_store(store_id):
     flash(f'Tienda {"verificada" if store.is_active else "desactivada"}', 'success')
     return redirect(url_for('admin.stores'))
 
-@admin_bp.route('/reports')
+# ============================================
+# GESTIÓN DE PRODUCTOS (ADMIN)
+# ============================================
+@admin_bp.route('/products')
 @login_required
 @admin_required
-def reports():
-    return render_template('admin/reports.html')
+def admin_products():
+    """Ver todos los productos (para administradores)"""
+    products = Product.query.order_by(Product.created_at.desc()).all()
+    return render_template('admin/products.html', products=products)
+
+@admin_bp.route('/products/<product_id>/delete', methods=['POST'])
+@login_required
+@admin_required
+def delete_product_admin(product_id):
+    """Eliminar producto (admin)"""
+    product = Product.query.get_or_404(product_id)
+    
+    try:
+        # Eliminar imagen si existe
+        if product.image_url:
+            from app.utils.helpers import delete_image
+            delete_image(product.image_url)
+        
+        db.session.delete(product)
+        db.session.commit()
+        flash(f'Producto "{product.name}" eliminado correctamente', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error al eliminar producto: {str(e)}', 'error')
+    
+    return redirect(url_for('admin.admin_products'))
+
+# ============================================
+# REPORTES (OPCIONAL - DESACTIVADO)
+# ============================================
+# @admin_bp.route('/reports')
+# @login_required
+# @admin_required
+# def reports():
+#     return render_template('admin/reports.html')
