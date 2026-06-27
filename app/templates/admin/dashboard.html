@@ -1,45 +1,46 @@
 {% extends "base.html" %}
 
-{% block title %}Dashboard - {{ store.name }}{% endblock %}
+{% block title %}Panel de Administración - MiZona{% endblock %}
 
 {% block content %}
-<div class="dashboard-container">
+<div class="admin-container">
     <!-- Sidebar -->
-    <aside class="dashboard-sidebar">
+    <aside class="admin-sidebar">
         <div class="sidebar-header">
-            {% if store.logo_url %}
-            <img src="{{ store.logo_url }}" alt="{{ store.name }}" class="store-logo">
-            {% else %}
-            <div class="store-icon"><i class="fas fa-store"></i></div>
-            {% endif %}
-            <h3>{{ store.name }}</h3>
-            <p><i class="fas fa-map-marker-alt"></i> {{ store.city }}</p>
-            <span class="store-status {% if store.is_active %}active{% else %}inactive{% endif %}">
-                {{ 'Activo' if store.is_active else 'Inactivo' }}
-            </span>
+            <i class="fas fa-crown"></i>
+            <h2>Admin</h2>
+            <p>Panel de Control</p>
         </div>
         
         <nav class="sidebar-nav">
-            <a href="#" class="nav-item active" data-section="products">
+            <a href="{{ url_for('admin.dashboard') }}" class="nav-item active">
+                <i class="fas fa-chart-pie"></i> Dashboard
+            </a>
+            <a href="{{ url_for('admin.users') }}" class="nav-item">
+                <i class="fas fa-users"></i> Usuarios
+                <span class="badge">{{ total_users }}</span>
+            </a>
+            <a href="{{ url_for('admin.stores') }}" class="nav-item">
+                <i class="fas fa-store"></i> Tiendas
+                <span class="badge">{{ total_stores }}</span>
+            </a>
+            <a href="#" class="nav-item">
                 <i class="fas fa-box"></i> Productos
-                <span class="badge">{{ products|length }}</span>
+                <span class="badge">{{ total_products }}</span>
             </a>
-            <a href="#" class="nav-item" data-section="orders">
+            <a href="#" class="nav-item">
                 <i class="fas fa-shopping-bag"></i> Pedidos
-                <span class="badge">0</span>
+                <span class="badge">{{ total_orders }}</span>
             </a>
-            <a href="#" class="nav-item" data-section="reviews">
+            <a href="#" class="nav-item">
                 <i class="fas fa-star"></i> Reseñas
-                <span class="badge">0</span>
+                <span class="badge">{{ total_reviews }}</span>
             </a>
-            <a href="#" class="nav-item" data-section="stats">
-                <i class="fas fa-chart-line"></i> Estadísticas
+            <a href="{{ url_for('admin.reports') }}" class="nav-item">
+                <i class="fas fa-file-alt"></i> Reportes
             </a>
-            <a href="{{ url_for('store.edit_store') }}" class="nav-item">
-                <i class="fas fa-cog"></i> Configuración
-            </a>
-            <a href="{{ url_for('store.view_store', slug=store.slug) }}" class="nav-item" target="_blank">
-                <i class="fas fa-eye"></i> Ver Tienda
+            <a href="{{ url_for('index') }}" class="nav-item">
+                <i class="fas fa-home"></i> Ver Sitio
             </a>
             <a href="{{ url_for('auth.logout') }}" class="nav-item logout">
                 <i class="fas fa-sign-out-alt"></i> Cerrar Sesión
@@ -48,440 +49,381 @@
     </aside>
     
     <!-- Main Content -->
-    <main class="dashboard-content">
-        <!-- Header -->
-        <header class="dash-header">
-            <h1>Panel de Control</h1>
-            <div class="dash-user">
-                <span>Bienvenido, <strong>{{ session.full_name }}</strong></span>
+    <main class="admin-content">
+        <header class="admin-header">
+            <h1>Dashboard</h1>
+            <div class="admin-user">
+                <span>{{ current_user.full_name }}</span>
+                <span class="role-badge">Administrador</span>
             </div>
         </header>
         
-        <!-- Stats Cards -->
-        <div class="stats-grid">
-            <div class="stat-card">
-                <div class="stat-icon" style="background: #E8F5E9;">
-                    <i class="fas fa-box" style="color: #2E7D32;"></i>
-                </div>
+        <!-- Stats -->
+        <div class="admin-stats">
+            <div class="stat-card" style="border-left: 4px solid #10B981;">
+                <div class="stat-icon"><i class="fas fa-users" style="color: #10B981;"></i></div>
                 <div class="stat-info">
-                    <h3>{{ products|length }}</h3>
-                    <p>Total Productos</p>
+                    <h3>{{ total_users }}</h3>
+                    <p>Usuarios Totales</p>
+                    <small>+{{ new_users }} nuevos (7 días)</small>
                 </div>
             </div>
-            <div class="stat-card">
-                <div class="stat-icon" style="background: #E3F2FD;">
-                    <i class="fas fa-shopping-bag" style="color: #1565C0;"></i>
-                </div>
+            
+            <div class="stat-card" style="border-left: 4px solid #3B82F6;">
+                <div class="stat-icon"><i class="fas fa-store" style="color: #3B82F6;"></i></div>
                 <div class="stat-info">
-                    <h3>0</h3>
+                    <h3>{{ total_stores }}</h3>
+                    <p>Tiendas Registradas</p>
+                </div>
+            </div>
+            
+            <div class="stat-card" style="border-left: 4px solid #F59E0B;">
+                <div class="stat-icon"><i class="fas fa-box" style="color: #F59E0B;"></i></div>
+                <div class="stat-info">
+                    <h3>{{ total_products }}</h3>
+                    <p>Productos Publicados</p>
+                </div>
+            </div>
+            
+            <div class="stat-card" style="border-left: 4px solid #EF4444;">
+                <div class="stat-icon"><i class="fas fa-shopping-bag" style="color: #EF4444;"></i></div>
+                <div class="stat-info">
+                    <h3>{{ total_orders }}</h3>
                     <p>Pedidos Totales</p>
                 </div>
             </div>
-            <div class="stat-card">
-                <div class="stat-icon" style="background: #FFF8E1;">
-                    <i class="fas fa-star" style="color: #F57F17;"></i>
-                </div>
+            
+            <div class="stat-card" style="border-left: 4px solid #8B5CF6;">
+                <div class="stat-icon"><i class="fas fa-star" style="color: #8B5CF6;"></i></div>
                 <div class="stat-info">
-                    <h3>{{ "%.1f"|format(store.rating_avg) if store.rating_avg else 0 }}</h3>
-                    <p>Calificación Promedio</p>
+                    <h3>{{ total_reviews }}</h3>
+                    <p>Reseñas</p>
                 </div>
             </div>
-            <div class="stat-card">
-                <div class="stat-icon" style="background: #FCE4EC;">
-                    <i class="fas fa-users" style="color: #C62828;"></i>
-                </div>
+            
+            <div class="stat-card" style="border-left: 4px solid #EC4899;">
+                <div class="stat-icon"><i class="fas fa-money-bill-wave" style="color: #EC4899;"></i></div>
                 <div class="stat-info">
-                    <h3>{{ store.followers_count }}</h3>
-                    <p>Seguidores</p>
+                    <h3>Bs {{ "%.2f"|format(monthly_sales) }}</h3>
+                    <p>Ventas del Mes</p>
                 </div>
             </div>
         </div>
         
-        <!-- Products Section -->
-        <section id="products" class="content-section active">
-            <div class="section-header">
-                <h2>Mis Productos</h2>
-                <button class="btn-primary" onclick="showAddProductModal()">
-                    <i class="fas fa-plus"></i> Nuevo Producto
-                </button>
+        <!-- Charts -->
+        <div class="admin-charts">
+            <div class="chart-card">
+                <h3>Pedidos por Estado</h3>
+                <canvas id="ordersChart"></canvas>
             </div>
             
-            <!-- Productos con stock bajo -->
-            {% if low_stock_products %}
-            <div class="alert-warning">
-                <i class="fas fa-exclamation-triangle"></i>
-                <strong>Alerta de Stock:</strong> Los siguientes productos tienen stock bajo:
-                <ul>
-                    {% for product in low_stock_products %}
-                    <li>{{ product.name }} - <strong>{{ product.stock }}</strong> unidades</li>
-                    {% endfor %}
-                </ul>
+            <div class="chart-card">
+                <h3>Productos Más Vendidos</h3>
+                <canvas id="topProductsChart"></canvas>
             </div>
-            {% endif %}
-            
-            <div class="products-grid">
-                {% for product in products %}
-                <div class="product-card">
-                    <div class="product-image">
-                        <img src="{{ product.image_url if product.image_url else 'https://via.placeholder.com/300x300?text=Sin+Imagen' }}" 
-                             alt="{{ product.name }}" loading="lazy">
-                        {% if not product.is_active %}
-                        <span class="inactive-badge">Inactivo</span>
-                        {% endif %}
-                        {% if product.discount_price %}
-                        <span class="discount-badge">-{{ product.get_discount_percentage() }}%</span>
-                        {% endif %}
-                    </div>
-                    <div class="product-info">
-                        <h3>{{ product.name }}</h3>
-                        <div class="product-meta">
-                            <span class="product-stock {% if product.stock > 10 %}stock-ok{% elif product.stock > 0 %}stock-low{% else %}stock-out{% endif %}">
-                                {{ product.stock }} disponibles
-                            </span>
-                            <span class="product-sold"><i class="fas fa-shopping-cart"></i> {{ product.sold_count }} vendidos</span>
-                        </div>
-                        <div class="product-pricing">
-                            {% if product.discount_price %}
-                            <span class="price original">Bs {{ "%.2f"|format(product.price) }}</span>
-                            <span class="price discounted">Bs {{ "%.2f"|format(product.discount_price) }}</span>
-                            {% else %}
-                            <span class="price">Bs {{ "%.2f"|format(product.price) }}</span>
-                            {% endif %}
-                        </div>
-                        <div class="product-actions">
-                            <button class="btn-edit" onclick="showEditProductModal('{{ product.id }}')">
-                                <i class="fas fa-edit"></i> Editar
-                            </button>
-                            <button class="btn-delete" onclick="deleteProduct('{{ product.id }}')">
-                                <i class="fas fa-trash"></i>
-                            </button>
-                            <a href="{{ url_for('product.detail', slug=product.slug) }}" class="btn-view" target="_blank">
-                                <i class="fas fa-eye"></i>
-                            </a>
-                        </div>
-                    </div>
-                </div>
-                {% else %}
-                <div class="empty-state">
-                    <i class="fas fa-box-open"></i>
-                    <h3>No tienes productos</h3>
-                    <p>Comienza agregando tu primer producto</p>
-                    <button class="btn-primary" onclick="showAddProductModal()">
-                        <i class="fas fa-plus"></i> Agregar Producto
-                    </button>
-                </div>
-                {% endfor %}
-            </div>
-        </section>
-        
-        <!-- Orders Section -->
-        <section id="orders" class="content-section">
-            <h2>Pedidos Recibidos</h2>
-            <div class="empty-state">
-                <i class="fas fa-shopping-bag"></i>
-                <h3>No hay pedidos aún</h3>
-                <p>Los pedidos aparecerán aquí cuando los clientes compren tus productos</p>
-            </div>
-        </section>
-        
-        <!-- Reviews Section -->
-        <section id="reviews" class="content-section">
-            <h2>Reseñas de Clientes</h2>
-            <div class="empty-state">
-                <i class="fas fa-star"></i>
-                <h3>Sin reseñas aún</h3>
-                <p>Los clientes calificarán tus productos aquí</p>
-            </div>
-        </section>
-        
-        <!-- Stats Section -->
-        <section id="stats" class="content-section">
-            <h2>Estadísticas</h2>
-            <div class="stats-charts">
-                <div class="chart-container">
-                    <h3>Ventas por Mes</h3>
-                    <canvas id="salesChart"></canvas>
-                </div>
-                <div class="chart-container">
-                    <h3>Productos Más Vendidos</h3>
-                    <canvas id="topProductsChart"></canvas>
-                </div>
-            </div>
-        </section>
+        </div>
     </main>
 </div>
 
-<!-- Modal para productos -->
-<div id="productModal" class="modal">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h2 id="modalTitle">Nuevo Producto</h2>
-            <span class="close" onclick="closeProductModal()">&times;</span>
-        </div>
-        <form id="productForm" enctype="multipart/form-data">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <input type="hidden" id="productId">
-            
-            <div class="form-group">
-                <label>Nombre del Producto *</label>
-                <input type="text" id="productName" class="form-control" required>
-            </div>
-            
-            <div class="form-row">
-                <div class="form-group">
-                    <label>Precio (Bs) *</label>
-                    <input type="number" id="productPrice" class="form-control" step="0.01" required>
-                </div>
-                <div class="form-group">
-                    <label>Precio con Descuento</label>
-                    <input type="number" id="productDiscount" class="form-control" step="0.01">
-                </div>
-            </div>
-            
-            <div class="form-row">
-                <div class="form-group">
-                    <label>Stock *</label>
-                    <input type="number" id="productStock" class="form-control" required>
-                </div>
-                <div class="form-group">
-                    <label>Stock Mínimo</label>
-                    <input type="number" id="productMinStock" class="form-control">
-                </div>
-            </div>
-            
-            <div class="form-group">
-                <label>Categoría</label>
-                <select id="productCategory" class="form-control">
-                    <option value="">Sin categoría</option>
-                    {% for category in categories %}
-                    <option value="{{ category.id }}">{{ category.name }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-            
-            <div class="form-group">
-                <label>Descripción</label>
-                <textarea id="productDesc" class="form-control" rows="3"></textarea>
-            </div>
-            
-            <div class="form-group">
-                <label>Imagen Principal</label>
-                <div class="image-upload" id="imageUpload">
-                    <i class="fas fa-cloud-upload-alt"></i>
-                    <p>Haz clic o arrastra una imagen aquí</p>
-                    <input type="file" id="productImage" accept="image/*">
-                    <img id="imagePreview" style="display: none; max-width: 200px; margin-top: 10px; border-radius: 8px;">
-                </div>
-            </div>
-            
-            <div class="form-group checkbox">
-                <label>
-                    <input type="checkbox" id="productFeatured"> Producto Destacado
-                </label>
-            </div>
-            
-            <div class="form-group checkbox">
-                <label>
-                    <input type="checkbox" id="productActive" checked> Producto Activo
-                </label>
-            </div>
-            
-            <button type="submit" class="btn-primary btn-block">
-                <i class="fas fa-save"></i> Guardar Producto
-            </button>
-        </form>
-    </div>
-</div>
-{% endblock %}
+<style>
+/* Admin Layout */
+.admin-container {
+    display: flex;
+    min-height: calc(100vh - 70px);
+    background: #F1F5F9;
+}
+
+.admin-sidebar {
+    width: 260px;
+    background: #0F172A;
+    color: #F8FAFC;
+    padding: 20px 0;
+    position: sticky;
+    top: 70px;
+    height: calc(100vh - 70px);
+    overflow-y: auto;
+}
+
+.sidebar-header {
+    padding: 0 20px 20px;
+    border-bottom: 1px solid #1E293B;
+}
+
+.sidebar-header i {
+    font-size: 2rem;
+    color: #F59E0B;
+}
+
+.sidebar-header h2 {
+    margin: 8px 0 4px;
+    font-size: 1.2rem;
+}
+
+.sidebar-header p {
+    color: #94A3B8;
+    font-size: 0.85rem;
+}
+
+.sidebar-nav {
+    padding: 16px 0;
+}
+
+.sidebar-nav .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 20px;
+    color: #94A3B8;
+    text-decoration: none;
+    transition: all 0.3s;
+    border-left: 3px solid transparent;
+}
+
+.sidebar-nav .nav-item:hover {
+    background: #1E293B;
+    color: #F8FAFC;
+}
+
+.sidebar-nav .nav-item.active {
+    background: #1E293B;
+    color: #F59E0B;
+    border-left-color: #F59E0B;
+}
+
+.sidebar-nav .nav-item i {
+    width: 20px;
+    text-align: center;
+}
+
+.sidebar-nav .nav-item .badge {
+    margin-left: auto;
+    background: #F59E0B;
+    color: #0F172A;
+    padding: 2px 10px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 700;
+}
+
+.sidebar-nav .nav-item.logout {
+    margin-top: 20px;
+    border-top: 1px solid #1E293B;
+    padding-top: 16px;
+    color: #EF4444;
+}
+
+.sidebar-nav .nav-item.logout:hover {
+    background: rgba(239, 68, 68, 0.1);
+}
+
+/* Admin Content */
+.admin-content {
+    flex: 1;
+    padding: 24px 32px;
+}
+
+.admin-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+}
+
+.admin-header h1 {
+    font-size: 1.8rem;
+    font-weight: 800;
+}
+
+.admin-user {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.role-badge {
+    background: #F59E0B;
+    color: #0F172A;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 700;
+}
+
+/* Stats */
+.admin-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+    margin-bottom: 30px;
+}
+
+.stat-card {
+    background: white;
+    padding: 20px;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    transition: transform 0.3s;
+}
+
+.stat-card:hover {
+    transform: translateY(-4px);
+}
+
+.stat-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    background: #F8FAFC;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+}
+
+.stat-info h3 {
+    font-size: 1.5rem;
+    font-weight: 800;
+    margin: 0;
+}
+
+.stat-info p {
+    color: #64748B;
+    font-size: 0.85rem;
+    margin: 0;
+}
+
+.stat-info small {
+    color: #10B981;
+    font-size: 0.75rem;
+}
+
+/* Charts */
+.admin-charts {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    margin-bottom: 30px;
+}
+
+.chart-card {
+    background: white;
+    padding: 20px;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.chart-card h3 {
+    font-size: 1rem;
+    margin-bottom: 16px;
+}
+
+.chart-card canvas {
+    max-height: 250px;
+}
+
+@media (max-width: 768px) {
+    .admin-sidebar {
+        display: none;
+    }
+    
+    .admin-content {
+        padding: 16px;
+    }
+    
+    .admin-stats {
+        grid-template-columns: 1fr 1fr;
+    }
+    
+    .admin-charts {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 480px) {
+    .admin-stats {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
 
 {% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-    // ============================================
-    // VARIABLES GLOBALES
-    // ============================================
-    let editProductId = null;
-    let currentStoreId = '{{ store.id }}';
-    
-    // ============================================
-    // MOSTRAR MODAL PARA NUEVO PRODUCTO
-    // ============================================
-    function showAddProductModal() {
-        editProductId = null;
-        document.getElementById('modalTitle').textContent = 'Nuevo Producto';
-        document.getElementById('productForm').reset();
-        document.getElementById('imagePreview').style.display = 'none';
-        document.getElementById('productModal').style.display = 'block';
-    }
-    
-    // ============================================
-    // MOSTRAR MODAL PARA EDITAR PRODUCTO
-    // ============================================
-    function showEditProductModal(productId) {
-        editProductId = productId;
-        document.getElementById('modalTitle').textContent = 'Editar Producto';
-        document.getElementById('productModal').style.display = 'block';
+document.addEventListener('DOMContentLoaded', function() {
+    // Gráfica de pedidos por estado
+    var ctx1 = document.getElementById('ordersChart');
+    if (ctx1) {
+        var statusLabels = ['Pendiente', 'Confirmado', 'Enviado', 'Entregado', 'Cancelado'];
+        var statusData = [
+            {{ orders_by_status.get('pendiente', 0) }},
+            {{ orders_by_status.get('confirmado', 0) }},
+            {{ orders_by_status.get('enviado', 0) }},
+            {{ orders_by_status.get('entregado', 0) }},
+            {{ orders_by_status.get('cancelado', 0) }}
+        ];
         
-        fetch(`/api/products/${productId}`)
-            .then(res => res.json())
-            .then(data => {
-                if (data.success) {
-                    const p = data.data;
-                    document.getElementById('productName').value = p.name || '';
-                    document.getElementById('productPrice').value = p.price || '';
-                    document.getElementById('productDiscount').value = p.discount_price || '';
-                    document.getElementById('productStock').value = p.stock || 0;
-                    document.getElementById('productMinStock').value = p.min_stock || 0;
-                    document.getElementById('productCategory').value = p.category_id || '';
-                    document.getElementById('productDesc').value = p.description || '';
-                    document.getElementById('productFeatured').checked = p.is_featured || false;
-                    document.getElementById('productActive').checked = p.is_active !== false;
-                    
-                    if (p.image_url) {
-                        const preview = document.getElementById('imagePreview');
-                        preview.src = p.image_url;
-                        preview.style.display = 'block';
+        new Chart(ctx1, {
+            type: 'doughnut',
+            data: {
+                labels: statusLabels,
+                datasets: [{
+                    data: statusData,
+                    backgroundColor: ['#F59E0B', '#3B82F6', '#8B5CF6', '#10B981', '#EF4444'],
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        position: 'bottom'
                     }
-                } else {
-                    alert('Error al cargar el producto: ' + (data.error || 'Desconocido'));
                 }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                alert('Error de conexión al cargar el producto');
-            });
-    }
-    
-    // ============================================
-    // CERRAR MODAL
-    // ============================================
-    function closeProductModal() {
-        document.getElementById('productModal').style.display = 'none';
-    }
-    
-    // ============================================
-    // ELIMINAR PRODUCTO
-    // ============================================
-    function deleteProduct(productId) {
-        if (confirm('¿Estás seguro de eliminar este producto?')) {
-            fetch(`/api/products/${productId}`, { 
-                method: 'DELETE',
-                headers: {
-                    'X-CSRFToken': document.querySelector('meta[name="csrf-token"]')?.content || ''
-                }
-            })
-            .then(res => res.json())
-            .then(data => {
-                if (data.success) {
-                    location.reload();
-                } else {
-                    alert('Error: ' + (data.error || 'Desconocido'));
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                alert('Error de conexión al eliminar el producto');
-            });
-        }
-    }
-    
-    // ============================================
-    // MANEJAR EL FORMULARIO
-    // ============================================
-    document.getElementById('productForm')?.addEventListener('submit', async function(e) {
-        e.preventDefault();
-        
-        const formData = new FormData();
-        formData.append('name', document.getElementById('productName').value);
-        formData.append('price', document.getElementById('productPrice').value);
-        formData.append('discount_price', document.getElementById('productDiscount').value || '');
-        formData.append('stock', document.getElementById('productStock').value || 0);
-        formData.append('min_stock', document.getElementById('productMinStock').value || 0);
-        formData.append('category_id', document.getElementById('productCategory').value || '');
-        formData.append('description', document.getElementById('productDesc').value || '');
-        formData.append('is_featured', document.getElementById('productFeatured').checked ? 'on' : 'off');
-        formData.append('is_active', document.getElementById('productActive')?.checked ? 'on' : 'off');
-        
-        const fileInput = document.getElementById('productImage');
-        if (fileInput.files && fileInput.files[0]) {
-            formData.append('image', fileInput.files[0]);
-        }
-        
-        const url = editProductId ? `/api/products/${editProductId}` : '/api/products';
-        const method = editProductId ? 'PUT' : 'POST';
-        
-        try {
-            const response = await fetch(url, {
-                method: method,
-                body: formData,
-                headers: {
-                    'X-CSRFToken': document.querySelector('meta[name="csrf-token"]')?.content || ''
-                }
-            });
-            
-            const result = await response.json();
-            
-            if (result.success) {
-                alert('✅ Producto guardado con éxito');
-                location.reload();
-            } else {
-                alert('❌ Error: ' + (result.error || 'Desconocido'));
-            }
-        } catch (error) {
-            console.error('❌ Error de conexión:', error);
-            alert('❌ Error de conexión al guardar el producto');
-        }
-    });
-    
-    // ============================================
-    // PREVIEW DE IMAGEN
-    // ============================================
-    document.getElementById('productImage')?.addEventListener('change', function(e) {
-        const file = e.target.files[0];
-        if (file) {
-            const reader = new FileReader();
-            reader.onload = function(ev) {
-                const preview = document.getElementById('imagePreview');
-                preview.src = ev.target.result;
-                preview.style.display = 'block';
-            };
-            reader.readAsDataURL(file);
-        }
-    });
-    
-    // ============================================
-    // NAVEGACIÓN DEL SIDEBAR
-    // ============================================
-    document.querySelectorAll('.nav-item[data-section]').forEach(item => {
-        item.addEventListener('click', function(e) {
-            e.preventDefault();
-            document.querySelectorAll('.nav-item[data-section]').forEach(n => n.classList.remove('active'));
-            document.querySelectorAll('.content-section').forEach(s => s.classList.remove('active'));
-            
-            this.classList.add('active');
-            const sectionId = this.dataset.section;
-            const section = document.getElementById(sectionId);
-            if (section) {
-                section.classList.add('active');
             }
         });
-    });
+    }
     
-    // ============================================
-    // CERRAR MODAL AL HACER CLIC FUERA
-    // ============================================
-    window.onclick = function(event) {
-        const modal = document.getElementById('productModal');
-        if (event.target === modal) {
-            closeProductModal();
-        }
-    };
-    
-    // ============================================
-    // INICIALIZAR
-    // ============================================
-    document.addEventListener('DOMContentLoaded', function() {
-        console.log('🚀 Dashboard inicializado');
-        console.log('🏪 Store ID:', currentStoreId);
-    });
+    // Gráfica de productos más vendidos
+    var ctx2 = document.getElementById('topProductsChart');
+    if (ctx2) {
+        var productLabels = [];
+        var productData = [];
+        {% for p in top_products %}
+        productLabels.push('{{ p.name }}');
+        productData.push({{ p.sold_count }});
+        {% endfor %}
+        
+        new Chart(ctx2, {
+            type: 'bar',
+            data: {
+                labels: productLabels,
+                datasets: [{
+                    label: 'Unidades Vendidas',
+                    data: productData,
+                    backgroundColor: '#10B981',
+                    borderColor: '#059669',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+    }
+});
 </script>
+{% endblock %}
 {% endblock %}
