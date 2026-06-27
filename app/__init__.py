@@ -58,20 +58,35 @@ def create_app(config_class=None):
     def load_user(user_id):
         return User.query.get(user_id)
     
+    # ============================================
+    # ✅ RUTA PRINCIPAL CORREGIDA
+    # ============================================
     @app.route('/')
     def index():
         from app.models.product import Product
         from app.models.category import Category
         from app.models.store import Store
         
-        products = Product.query.filter_by(is_active=True).limit(8).all()
+        # ✅ Obtener productos destacados (activos y con flag is_featured)
+        featured_products = Product.query.filter_by(
+            is_active=True, 
+            is_featured=True
+        ).limit(8).all()
+        
+        # ✅ Si no hay destacados, mostrar los más recientes
+        if not featured_products:
+            featured_products = Product.query.filter_by(
+                is_active=True
+            ).order_by(Product.created_at.desc()).limit(8).all()
+        
         categories = Category.query.all()
         stores = Store.query.filter_by(is_active=True).all()
         
         return render_template('index.html', 
-                            products=products, 
-                            categories=categories, 
-                            stores=stores)
+                             products=featured_products,
+                             featured_products=featured_products,
+                             categories=categories, 
+                             stores=stores)
     
     with app.app_context():
         try:
@@ -80,13 +95,13 @@ def create_app(config_class=None):
             if not os.path.exists(instance_path):
                 os.makedirs(instance_path)
             
-            # ✅ CREAR CARPETA UPLOADS
+            # Crear carpeta uploads
             upload_path = os.path.join(app.static_folder, 'uploads')
             if not os.path.exists(upload_path):
                 os.makedirs(upload_path, exist_ok=True)
                 print(f"✅ Carpeta uploads creada: {upload_path}")
             
-            # ✅ CREAR CARPETA PRODUCTS
+            # Crear carpeta products
             products_path = os.path.join(upload_path, 'products')
             if not os.path.exists(products_path):
                 os.makedirs(products_path, exist_ok=True)
