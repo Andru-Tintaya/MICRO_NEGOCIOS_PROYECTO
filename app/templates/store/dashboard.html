@@ -17,10 +17,6 @@
             <span class="store-status {% if store.is_active %}active{% else %}inactive{% endif %}">
                 {{ 'Activo' if store.is_active else 'Inactivo' }}
             </span>
-            <!-- ✅ Botón para cerrar sidebar en móvil -->
-            <button class="sidebar-toggle" onclick="toggleSidebar()" style="display: none; background: none; border: none; color: white; font-size: 1.5rem; cursor: pointer;">
-                <i class="fas fa-times"></i>
-            </button>
         </div>
         
         <nav class="sidebar-nav">
@@ -28,7 +24,7 @@
                 <i class="fas fa-box"></i> Productos
                 <span class="badge">{{ products|length }}</span>
             </a>
-            <a href="{{ url_for('order.list') }}" class="nav-item">
+            <a href="#" class="nav-item" data-section="orders">
                 <i class="fas fa-shopping-bag"></i> Pedidos
                 <span class="badge">0</span>
             </a>
@@ -57,14 +53,10 @@
             <h1>Panel de Control</h1>
             <div class="dash-user">
                 <span>Bienvenido, <strong>{{ session.full_name }}</strong></span>
-                <!-- ✅ Botón para abrir sidebar en móvil -->
-                <button class="sidebar-open" onclick="toggleSidebar()" style="display: none; background: none; border: none; font-size: 1.5rem; cursor: pointer;">
-                    <i class="fas fa-bars"></i>
-                </button>
             </div>
         </header>
         
-        <!-- Stats Cards (sin seguidores) -->
+        <!-- Stats Cards -->
         <div class="stats-grid">
             <div class="stat-card">
                 <div class="stat-icon" style="background: #E8F5E9;">
@@ -80,10 +72,8 @@
                     <i class="fas fa-shopping-bag" style="color: #1565C0;"></i>
                 </div>
                 <div class="stat-info">
-                    <a href="{{ url_for('order.list') }}" style="text-decoration: none; color: inherit;">
-                        <h3>0</h3>
-                        <p>Pedidos Totales</p>
-                    </a>
+                    <h3>0</h3>
+                    <p>Pedidos Totales</p>
                 </div>
             </div>
             <div class="stat-card">
@@ -93,6 +83,15 @@
                 <div class="stat-info">
                     <h3>{{ "%.1f"|format(store.rating_avg) if store.rating_avg else 0 }}</h3>
                     <p>Calificación Promedio</p>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon" style="background: #FCE4EC;">
+                    <i class="fas fa-users" style="color: #C62828;"></i>
+                </div>
+                <div class="stat-info">
+                    <h3>{{ store.followers_count }}</h3>
+                    <p>Seguidores</p>
                 </div>
             </div>
         </div>
@@ -173,42 +172,35 @@
             </div>
         </section>
         
-        <!-- Orders Section (redireccionada) -->
         <section id="orders" class="content-section">
             <h2>Pedidos Recibidos</h2>
-            <div style="text-align: center; padding: 40px 20px; background: #F8FAFC; border-radius: 12px;">
-                <i class="fas fa-shopping-bag" style="font-size: 3rem; color: #10B981; margin-bottom: 16px;"></i>
-                <h3>Gestiona tus pedidos</h3>
-                <p style="color: #64748B; max-width: 400px; margin: 0 auto 16px;">Visualiza y administra todos los pedidos de tu tienda</p>
-                <a href="{{ url_for('order.list') }}" class="btn-primary" style="display: inline-block; padding: 10px 24px;">
-                    <i class="fas fa-arrow-right"></i> Ir a Pedidos
-                </a>
+            <div class="empty-state">
+                <i class="fas fa-shopping-bag"></i>
+                <h3>No hay pedidos aún</h3>
+                <p>Los pedidos aparecerán aquí cuando los clientes compren tus productos</p>
             </div>
         </section>
         
-        <!-- Reviews Section -->
         <section id="reviews" class="content-section">
             <h2>Reseñas de Clientes</h2>
-            <div style="text-align: center; padding: 40px 20px; background: #F8FAFC; border-radius: 12px;">
-                <i class="fas fa-star" style="font-size: 3rem; color: #F59E0B; margin-bottom: 16px;"></i>
-                <h3>Gestiona tus reseñas</h3>
-                <p style="color: #64748B; max-width: 400px; margin: 0 auto 16px;">Visualiza y responde a las reseñas de tus clientes</p>
-                <a href="#" class="btn-primary" style="display: inline-block; padding: 10px 24px;">
-                    <i class="fas fa-arrow-right"></i> Ir a Reseñas
-                </a>
+            <div class="empty-state">
+                <i class="fas fa-star"></i>
+                <h3>Sin reseñas aún</h3>
+                <p>Los clientes calificarán tus productos aquí</p>
             </div>
         </section>
         
-        <!-- Stats Section -->
         <section id="stats" class="content-section">
             <h2>Estadísticas</h2>
-            <div style="text-align: center; padding: 40px 20px; background: #F8FAFC; border-radius: 12px;">
-                <i class="fas fa-chart-line" style="font-size: 3rem; color: #3B82F6; margin-bottom: 16px;"></i>
-                <h3>Visualiza tus estadísticas</h3>
-                <p style="color: #64748B; max-width: 400px; margin: 0 auto 16px;">Analiza el rendimiento de tu tienda</p>
-                <a href="#" class="btn-primary" style="display: inline-block; padding: 10px 24px;">
-                    <i class="fas fa-arrow-right"></i> Ver Estadísticas
-                </a>
+            <div class="stats-charts">
+                <div class="chart-container">
+                    <h3>Ventas por Mes</h3>
+                    <canvas id="salesChart"></canvas>
+                </div>
+                <div class="chart-container">
+                    <h3>Productos Más Vendidos</h3>
+                    <canvas id="topProductsChart"></canvas>
+                </div>
             </div>
         </section>
     </main>
@@ -267,6 +259,7 @@
                 <textarea id="productDesc" class="form-control" rows="3"></textarea>
             </div>
             
+            <!-- ✅ ÁREA DE SUBIDA DE IMÁGENES (SIMPLE Y FUNCIONAL) -->
             <div class="form-group">
                 <label>Imagen Principal</label>
                 <div id="imagePreviewContainer" style="margin-bottom: 10px;">
@@ -294,88 +287,10 @@
         </form>
     </div>
 </div>
-
-<style>
-/* ✅ Sidebar responsive */
-.dashboard-sidebar {
-    transition: transform 0.3s ease;
-}
-
-@media (max-width: 768px) {
-    .dashboard-sidebar {
-        position: fixed;
-        top: 0;
-        left: 0;
-        height: 100vh;
-        width: 280px;
-        transform: translateX(-100%);
-        z-index: 1000;
-        background: #0F172A;
-        overflow-y: auto;
-        padding-top: 20px;
-    }
-    
-    .dashboard-sidebar.open {
-        transform: translateX(0);
-    }
-    
-    .sidebar-toggle,
-    .sidebar-open {
-        display: block !important;
-    }
-    
-    .dashboard-content {
-        padding: 16px !important;
-    }
-    
-    .stats-grid {
-        grid-template-columns: 1fr 1fr !important;
-    }
-    
-    .products-grid {
-        grid-template-columns: 1fr !important;
-    }
-}
-
-/* ✅ Overlay para móvil */
-.sidebar-overlay {
-    display: none;
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0,0,0,0.5);
-    z-index: 999;
-}
-
-.sidebar-overlay.active {
-    display: block;
-}
-</style>
-
-<!-- ✅ Overlay para cerrar sidebar en móvil -->
-<div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+{% endblock %}
 
 {% block extra_js %}
 <script>
-    // ============================================
-    // TOGGLE SIDEBAR EN MÓVIL
-    // ============================================
-    function toggleSidebar() {
-        const sidebar = document.querySelector('.dashboard-sidebar');
-        const overlay = document.getElementById('sidebarOverlay');
-        sidebar.classList.toggle('open');
-        overlay.classList.toggle('active');
-    }
-    
-    function closeSidebar() {
-        const sidebar = document.querySelector('.dashboard-sidebar');
-        const overlay = document.getElementById('sidebarOverlay');
-        sidebar.classList.remove('open');
-        overlay.classList.remove('active');
-    }
-    
     // ============================================
     // VARIABLES GLOBALES
     // ============================================
@@ -389,8 +304,13 @@
         console.log('🚀 Dashboard inicializado');
         console.log('🏪 Store ID:', currentStoreId);
         
+        // ✅ PREVISUALIZACIÓN DE IMAGEN
         setupImagePreview();
+        
+        // ✅ NAVEGACIÓN DEL SIDEBAR
         setupSidebarNavigation();
+        
+        // ✅ CIERRE DEL MODAL
         setupModalClose();
     });
     
@@ -411,6 +331,7 @@
                     if (preview && container) {
                         preview.src = ev.target.result;
                         container.style.display = 'block';
+                        console.log('✅ Imagen cargada para previsualización');
                     }
                 };
                 reader.readAsDataURL(file);
@@ -426,6 +347,7 @@
         document.getElementById('modalTitle').textContent = 'Nuevo Producto';
         document.getElementById('productForm').reset();
         
+        // Limpiar imagen
         const preview = document.getElementById('imagePreview');
         const container = document.getElementById('imagePreviewContainer');
         const fileInput = document.getElementById('productImage');
@@ -435,6 +357,7 @@
         if (fileInput) fileInput.value = '';
         
         document.getElementById('productModal').style.display = 'block';
+        console.log('📦 Modal de nuevo producto abierto');
     }
     
     // ============================================
@@ -444,6 +367,8 @@
         editProductId = productId;
         document.getElementById('modalTitle').textContent = 'Editar Producto';
         document.getElementById('productModal').style.display = 'block';
+        
+        console.log('📦 Cargando producto:', productId);
         
         fetch(`/api/products/${productId}`)
             .then(res => res.json())
@@ -460,16 +385,20 @@
                     document.getElementById('productFeatured').checked = p.is_featured || false;
                     document.getElementById('productActive').checked = p.is_active !== false;
                     
+                    // Mostrar imagen si existe
                     const preview = document.getElementById('imagePreview');
                     const container = document.getElementById('imagePreviewContainer');
                     if (p.image_url && preview) {
                         preview.src = p.image_url;
                         container.style.display = 'block';
+                        console.log('✅ Imagen cargada:', p.image_url);
                     }
+                } else {
+                    alert('Error al cargar el producto: ' + (data.error || 'Desconocido'));
                 }
             })
             .catch(error => {
-                console.error('Error:', error);
+                console.error('❌ Error:', error);
                 alert('Error de conexión al cargar el producto');
             });
     }
@@ -479,6 +408,7 @@
     // ============================================
     function closeProductModal() {
         document.getElementById('productModal').style.display = 'none';
+        console.log('📦 Modal cerrado');
     }
     
     // ============================================
@@ -489,19 +419,22 @@
             return;
         }
         
-        fetch(`/api/products/${productId}`, { method: 'DELETE' })
-            .then(res => res.json())
-            .then(data => {
-                if (data.success) {
-                    location.reload();
-                } else {
-                    alert('Error: ' + (data.error || 'Desconocido'));
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                alert('Error de conexión al eliminar el producto');
-            });
+        fetch(`/api/products/${productId}`, { 
+            method: 'DELETE'
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                console.log('✅ Producto eliminado');
+                location.reload();
+            } else {
+                alert('Error: ' + (data.error || 'Desconocido'));
+            }
+        })
+        .catch(error => {
+            console.error('❌ Error:', error);
+            alert('Error de conexión al eliminar el producto');
+        });
     }
     
     // ============================================
@@ -509,6 +442,8 @@
     // ============================================
     document.getElementById('productForm')?.addEventListener('submit', async function(e) {
         e.preventDefault();
+        
+        console.log('📤 Enviando formulario...');
         
         const formData = new FormData();
         formData.append('name', document.getElementById('productName').value);
@@ -524,6 +459,7 @@
         const fileInput = document.getElementById('productImage');
         if (fileInput.files && fileInput.files[0]) {
             formData.append('image', fileInput.files[0]);
+            console.log('📷 Imagen adjunta:', fileInput.files[0].name);
         }
         
         const url = editProductId ? `/api/products/${editProductId}` : '/api/products';
@@ -544,7 +480,7 @@
                 alert('❌ Error: ' + (result.error || 'Desconocido'));
             }
         } catch (error) {
-            console.error('Error de conexión:', error);
+            console.error('❌ Error de conexión:', error);
             alert('❌ Error de conexión al guardar el producto');
         }
     });
