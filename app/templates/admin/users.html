@@ -79,7 +79,8 @@
                                      alt="{{ user.full_name }}" class="user-avatar">
                                 <div>
                                     <strong>{{ user.full_name }}</strong>
-                                    <small>{{ user.id[:8] }}...</small>
+                                    <!-- ✅ CORREGIDO: Convertir UUID a string y mostrar los primeros 8 caracteres -->
+                                    <small>{{ user.id.hex[:8] }}...</small>
                                 </div>
                             </div>
                         </td>
