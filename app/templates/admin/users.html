@@ -4,12 +4,14 @@
 
 {% block content %}
 <div class="admin-container">
+    <!-- Sidebar -->
     <aside class="admin-sidebar">
         <div class="sidebar-header">
             <i class="fas fa-crown"></i>
             <h2>Admin</h2>
             <p>Panel de Control</p>
         </div>
+        
         <nav class="sidebar-nav">
             <a href="{{ url_for('admin.dashboard') }}" class="nav-item">
                 <i class="fas fa-chart-pie"></i> Dashboard
@@ -21,6 +23,7 @@
             <a href="{{ url_for('admin.stores') }}" class="nav-item">
                 <i class="fas fa-store"></i> Tiendas
             </a>
+            <!-- ELIMINADO: admin.admin_products (no existe) -->
             <a href="{{ url_for('index') }}" class="nav-item">
                 <i class="fas fa-home"></i> Ver Sitio
             </a>
@@ -29,7 +32,8 @@
             </a>
         </nav>
     </aside>
-
+    
+    <!-- Main Content -->
     <main class="admin-content">
         <header class="admin-header">
             <h1>Gestión de Usuarios</h1>
@@ -38,7 +42,8 @@
                 <span class="role-badge">Administrador</span>
             </div>
         </header>
-
+        
+        <!-- Filters -->
         <div class="admin-filters">
             <div class="search-box">
                 <input type="text" id="searchUser" placeholder="Buscar usuario..." onkeyup="filterUsers()">
@@ -56,7 +61,8 @@
                 <option value="inactive">Inactivos</option>
             </select>
         </div>
-
+        
+        <!-- Users Table -->
         <div class="table-container">
             <table class="admin-table">
                 <thead>
@@ -105,7 +111,7 @@
                                         <i class="fas {% if user.is_active %}fa-pause{% else %}fa-play{% endif %}"></i>
                                     </button>
                                 </form>
-
+                                
                                 <!-- Cambiar Rol -->
                                 <form method="POST" action="{{ url_for('admin.change_role', user_id=user.id) }}" style="display: inline;">
                                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -126,19 +132,24 @@
                 </tbody>
             </table>
         </div>
-
+        
+        <!-- Pagination -->
         {% if users.pages > 1 %}
         <div class="pagination">
             {% if users.has_prev %}
             <a href="{{ url_for('admin.users', page=users.prev_num) }}">&laquo; Anterior</a>
             {% endif %}
+            
             {% for page in users.iter_pages() %}
                 {% if page %}
-                    <a href="{{ url_for('admin.users', page=page) }}" class="{% if page == users.page %}active{% endif %}">{{ page }}</a>
+                    <a href="{{ url_for('admin.users', page=page) }}" class="{% if page == users.page %}active{% endif %}">
+                        {{ page }}
+                    </a>
                 {% else %}
                     <span class="dots">...</span>
                 {% endif %}
             {% endfor %}
+            
             {% if users.has_next %}
             <a href="{{ url_for('admin.users', page=users.next_num) }}">Siguiente &raquo;</a>
             {% endif %}
@@ -148,6 +159,7 @@
 </div>
 
 <style>
+/* (Mantén todos los estilos exactamente como estaban, no los cambies) */
 .admin-container { display: flex; min-height: calc(100vh - 70px); background: #F1F5F9; }
 .admin-sidebar { width: 260px; background: #0F172A; color: #F8FAFC; padding: 20px 0; position: sticky; top: 70px; height: calc(100vh - 70px); overflow-y: auto; }
 .sidebar-header { padding: 0 20px 20px; border-bottom: 1px solid #1E293B; }
@@ -214,15 +226,19 @@ function filterUsers() {
     const role = document.getElementById('filterRole').value;
     const status = document.getElementById('filterStatus').value;
     const rows = document.querySelectorAll('.admin-table tbody tr');
+    
     rows.forEach(row => {
         const text = row.textContent.toLowerCase();
         const userRole = row.querySelector('.role-tag')?.textContent.toLowerCase() || '';
         const userStatus = row.querySelector('.status-tag')?.textContent.toLowerCase() || '';
+        
         let show = true;
+        
         if (search && !text.includes(search)) show = false;
         if (role && !userRole.includes(role)) show = false;
         if (status === 'active' && userStatus !== 'activo') show = false;
         if (status === 'inactive' && userStatus !== 'inactivo') show = false;
+        
         row.style.display = show ? '' : 'none';
     });
 }
