@@ -105,12 +105,17 @@ def save_image(file, folder='products'):
     if not file or not file.filename:
         return None
     
-    # Si SUPABASE_URL está configurado, usar Supabase
-    if current_app.config.get('SUPABASE_URL'):
+    # ✅ FORZAR Supabase en producción (SIEMPRE usar Supabase)
+    supabase_url = current_app.config.get('SUPABASE_URL')
+    
+    # Si SUPABASE_URL está configurado O estamos en producción
+    if supabase_url or os.getenv('PRODUCTION') == 'True':
         bucket = current_app.config.get('SUPABASE_BUCKET', 'product-images')
+        print(f"📤 Guardando en Supabase: {bucket}")
         return save_image_supabase(file, bucket, folder)
     else:
-        # Fallback a local
+        # Fallback a local (solo para desarrollo)
+        print("⚠️ Usando almacenamiento LOCAL (no Supabase)")
         return save_image_local(file, folder)
 
 # ============================================
