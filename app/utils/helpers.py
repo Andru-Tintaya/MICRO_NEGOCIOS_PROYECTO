@@ -61,7 +61,7 @@ def save_image_supabase(file, bucket, folder='products'):
         
         supabase_url = current_app.config.get('SUPABASE_URL')
         # 🔑 USAR LA CLAVE CORRECTA (la misma que funciona en el dashboard)
-        supabase_key = current_app.config.get('SUPABASE_SERVICE_KEY')
+        supabase_key = current_app.config.get('SUPABASE_KEY')
         
         if not supabase_url:
             print("❌ SUPABASE_URL no configurado")
@@ -104,6 +104,9 @@ def save_image_supabase(file, bucket, folder='products'):
         import traceback
         traceback.print_exc()
         return save_image_local(file, folder)
+    
+    
+    
 # ============================================
 # ✅ FUNCIÓN PRINCIPAL (usa Supabase si está configurado)
 # ============================================
