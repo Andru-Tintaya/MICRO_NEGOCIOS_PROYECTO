@@ -60,15 +60,21 @@ def save_image_supabase(file, bucket, folder='products'):
         from supabase import create_client
         
         supabase_url = current_app.config.get('SUPABASE_URL')
+        # 🔑 USAR LA CLAVE CORRECTA (la misma que funciona en el dashboard)
         supabase_key = current_app.config.get('SUPABASE_SERVICE_KEY')
         
         if not supabase_url:
             print("❌ SUPABASE_URL no configurado")
             return save_image_local(file, folder)
         
+        if not supabase_key:
+            print("❌ SUPABASE_SERVICE_KEY no configurada")
+            return save_image_local(file, folder)
+        
         if not validate_image_extension(file.filename):
             raise ValueError("Tipo de archivo no permitido. Solo: png, jpg, jpeg, gif, webp")
         
+        # ✅ FORMA CORRECTA DE CREAR EL CLIENTE
         supabase = create_client(supabase_url, supabase_key)
         
         # Generar nombre único
@@ -83,19 +89,21 @@ def save_image_supabase(file, bucket, folder='products'):
         upload_result = supabase.storage.from_(bucket).upload(file_path, file.read())
         
         if not upload_result:
-            print("❌ Error al subir a Supabase")
+            print("❌ Error al subir a Supabase: No se recibió respuesta")
             return save_image_local(file, folder)
         
-        # ✅ ✅ ✅ GENERAR URL COMPLETA MANUALMENTE
+        # ✅ GENERAR URL COMPLETA
         public_url = f"{supabase_url}/storage/v1/object/public/{bucket}/{file_path}"
         
         print(f"✅ Imagen subida correctamente: {public_url}")
         return public_url
         
     except Exception as e:
-        print(f"❌ Error subiendo a Supabase: {e}")
+        print(f"❌ Error subiendo a Supabase: {str(e)}")
+        # Mostrar más detalles del error
+        import traceback
+        traceback.print_exc()
         return save_image_local(file, folder)
-
 # ============================================
 # ✅ FUNCIÓN PRINCIPAL (usa Supabase si está configurado)
 # ============================================
