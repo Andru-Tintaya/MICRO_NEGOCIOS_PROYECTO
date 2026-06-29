@@ -55,27 +55,19 @@ def save_image_local(file, folder='products'):
 # ============================================
 
 def save_image_supabase(file, bucket, folder='products'):
-    """✅ Guardar imagen en Supabase Storage con URL correcta"""
+    """✅ Guardar imagen en Supabase usando requests (más confiable)"""
     try:
-        from supabase import create_client
+        import requests
         
         supabase_url = current_app.config.get('SUPABASE_URL')
-        # 🔑 USAR LA CLAVE CORRECTA (la misma que funciona en el dashboard)
-        supabase_key = current_app.config.get('SUPABASE_KEY')
+        supabase_key = current_app.config.get('SUPABASE_SERVICE_KEY')
         
-        if not supabase_url:
-            print("❌ SUPABASE_URL no configurado")
-            return save_image_local(file, folder)
-        
-        if not supabase_key:
-            print("❌ SUPABASE_SERVICE_KEY no configurada")
+        if not supabase_url or not supabase_key:
+            print("❌ Configuración de Supabase incompleta")
             return save_image_local(file, folder)
         
         if not validate_image_extension(file.filename):
             raise ValueError("Tipo de archivo no permitido. Solo: png, jpg, jpeg, gif, webp")
-        
-        # ✅ FORMA CORRECTA DE CREAR EL CLIENTE
-        supabase = create_client(supabase_url, supabase_key)
         
         # Generar nombre único
         original_filename = secure_filename(file.filename)
@@ -84,23 +76,28 @@ def save_image_supabase(file, bucket, folder='products'):
         filename = f"{unique_id}_{datetime.now().strftime('%Y%m%d%H%M%S')}.{extension}"
         file_path = f"{folder}/{filename}"
         
-        # ✅ Subir a Supabase
-        file.seek(0)
-        upload_result = supabase.storage.from_(bucket).upload(file_path, file.read())
+        # ✅ Usar la API REST de Supabase directamente
+        url = f"{supabase_url}/storage/v1/object/{bucket}/{file_path}"
+        headers = {
+            "apikey": supabase_key,
+            "Authorization": f"Bearer {supabase_key}",
+            "Content-Type": file.content_type or f"image/{extension}",
+        }
         
-        if not upload_result:
-            print("❌ Error al subir a Supabase: No se recibió respuesta")
+        file.seek(0)
+        response = requests.post(url, headers=headers, data=file.read())
+        
+        if response.status_code not in [200, 201]:
+            print(f"❌ Error HTTP {response.status_code}: {response.text}")
             return save_image_local(file, folder)
         
-        # ✅ GENERAR URL COMPLETA
+        # ✅ URL pública
         public_url = f"{supabase_url}/storage/v1/object/public/{bucket}/{file_path}"
-        
         print(f"✅ Imagen subida correctamente: {public_url}")
         return public_url
         
     except Exception as e:
-        print(f"❌ Error subiendo a Supabase: {str(e)}")
-        # Mostrar más detalles del error
+        print(f"❌ Error: {e}")
         import traceback
         traceback.print_exc()
         return save_image_local(file, folder)
